@@ -1,0 +1,24 @@
+<%- include('../partials/header', { titulo: 'Restablecer contraseña' }) %>
+<section class="tarjeta formulario">
+  <h1>Restablecer contraseña</h1>
+
+  <%- include('../partials/errores', { errores: locals.errores || [] }) %>
+
+  <% if (estado === 'formulario') { %>
+    <form action="/restablecer-contrasena" method="post" novalidate>
+      <input type="hidden" name="token" value="<%= token %>">
+
+      <label for="contrasena">Contraseña nueva</label>
+      <input type="password" id="contrasena" name="contrasena" minlength="8" maxlength="72" required autofocus>
+      <small>Mínimo 8 caracteres, con al menos una letra y un número.</small>
+
+      <label for="confirmacion">Repite la contraseña</label>
+      <input type="password" id="confirmacion" name="confirmacion" minlength="8" maxlength="72" required>
+
+      <button type="submit">Cambiar contraseña</button>
+    </form>
+  <% } else { %>
+    <p><a class="boton" href="/olvide-contrasena">Pedir un enlace nuevo</a></p>
+  <% } %>
+</section>
+<%- include('../partials/footer') %>

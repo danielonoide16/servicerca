@@ -1,0 +1,16 @@
+<%- include('../partials/header', { titulo: 'Olvidé mi contraseña' }) %>
+<section class="tarjeta formulario">
+  <h1>Olvidé mi contraseña</h1>
+  <p>Escribe tu correo y, si tiene una cuenta, te enviaremos un enlace para elegir una contraseña nueva.</p>
+
+  <%- include('../partials/errores', { errores: locals.errores || [] }) %>
+
+  <form action="/olvide-contrasena" method="post" novalidate>
+    <label for="correo">Correo</label>
+    <input type="email" id="correo" name="correo" value="<%= (locals.valores && valores.correo) || '' %>" required autofocus>
+    <button type="submit">Enviar enlace</button>
+  </form>
+
+  <p><a href="/login">Volver a iniciar sesión</a></p>
+</section>
+<%- include('../partials/footer') %>
