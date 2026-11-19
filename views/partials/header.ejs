@@ -1,0 +1,38 @@
+<% const usuarioActual = locals.usuario || null; -%>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= locals.titulo ? titulo + ' · ServiCerca' : 'ServiCerca' %></title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="barra">
+    <a class="marca" href="/">ServiCerca</a>
+    <nav>
+      <% if (usuarioActual && usuarioActual.rol === 'cliente') { %>
+        <a href="/solicitudes/mias">Mis solicitudes</a>
+        <a href="/solicitudes/nueva">Nueva solicitud</a>
+      <% } else if (usuarioActual && usuarioActual.rol === 'prestador') { %>
+        <a href="/solicitudes">Buscar solicitudes</a>
+        <a href="/propuestas">Mis propuestas</a>
+        <a href="/perfil">Mi perfil</a>
+      <% } %>
+      <% if (usuarioActual) { %>
+        <span class="usuario"><%= usuarioActual.nombre %></span>
+        <form action="/logout" method="post" class="en-linea">
+          <button type="submit" class="enlace">Cerrar sesión</button>
+        </form>
+      <% } else { %>
+        <a href="/login">Iniciar sesión</a>
+        <a href="/registro">Registrarse</a>
+      <% } %>
+    </nav>
+  </header>
+  <% if (usuarioActual && !usuarioActual.emailVerificado) { %>
+    <div class="aviso">
+      Tu correo aún no está verificado. Hasta que lo verifiques no podrás publicar solicitudes ni enviar propuestas.
+    </div>
+  <% } %>
+  <main class="contenido">
