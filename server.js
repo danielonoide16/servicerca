@@ -54,6 +54,7 @@ app.use(session({
 app.use(cargarUsuario);
 
 app.use('/', require('./routes/auth'));
+app.use('/', require('./routes/cuenta'));
 app.use('/perfil', require('./routes/perfil'));
 app.use('/solicitudes', require('./routes/solicitudes'));
 app.use('/propuestas', require('./routes/propuestas'));

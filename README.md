@@ -39,6 +39,11 @@ Para correrlo sin recarga automática usar `npm start`.
 | `NODE_ENV` | `development` (por defecto) o `production`. En producción las cookies son `secure`. |
 | `SESSION_SECRET` | Texto largo y propio para firmar las sesiones. Obligatorio: si falta, el servidor no arranca. |
 | `DATABASE_PATH` | Ruta del archivo SQLite, relativa a la raíz del proyecto o absoluta. Por defecto `db/servicerca.db`. |
+| `APP_URL` | URL pública de la aplicación. Se usa para armar los enlaces de los correos. Por defecto `http://localhost:3000`. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` | Servidor SMTP para enviar correos (`SMTP_SECURE=true` solo con el puerto 465). Ver [Correos](#correos). |
+| `MAIL_FROM` | Remitente de los correos. |
+
+Si el servidor SMTP no está configurado, el sistema funciona igual: los correos no salen, el aviso queda en la consola y las peticiones responden normalmente.
 
 ### Scripts
 
@@ -48,6 +53,7 @@ Para correrlo sin recarga automática usar `npm start`.
 | `npm start` | Arranca el servidor con Node. |
 | `npm run migrate` | Aplica las migraciones pendientes y muestra cuáles están aplicadas. |
 | `npm run seed` | Limpia las tablas y carga los datos de prueba. |
+| `npm run mail:ethereal` | Crea una cuenta de prueba en Ethereal e imprime las variables SMTP para el `.env`. |
 
 ## Base de datos
 
@@ -150,11 +156,13 @@ servicerca/
 │   ├── migrations/      # Esquema versionado (001_inicial.sql, ...)
 │   ├── seed.js          # Datos de prueba (npm run seed)
 │   ├── tipos.js         # Constantes: roles, estados y propósitos de los tokens
-│   └── usuarioModel.js  # Consultas SQL de usuarios
-├── routes/              # Rutas de las vistas (auth, perfil, solicitudes, propuestas, resenas)
+│   ├── usuarioModel.js  # Consultas SQL de usuarios
+│   └── tokenModel.js    # Consultas SQL de los tokens de un solo uso
+├── routes/              # Rutas de las vistas (auth, cuenta, perfil, solicitudes, propuestas, resenas)
 ├── controllers/         # Reciben la petición, validan los datos y renderizan la vista
 ├── middleware/          # cargarUsuario, requireAuth (requireRole, requireVerifiedEmail) y errorHandler
-├── utils/               # log.js: mensajes de consola
+├── utils/               # correo.js (envío de correos con nodemailer) y log.js (mensajes de consola)
+├── scripts/             # ethereal.js: crea una cuenta de prueba de correo
 ├── views/               # Plantillas EJS (auth, perfil, solicitudes, partials)
 └── public/css/          # Estilos
 ```
@@ -170,6 +178,10 @@ Todo se hace desde las vistas (formularios HTML): el proyecto no expone una API.
 | GET / POST | `/registro` | Crear cuenta (`nombre`, `correo`, `contrasena`, `rol`, aceptar el aviso de privacidad). Responde 400 si hay datos inválidos y 409 si el correo ya existe |
 | GET / POST | `/login` | Iniciar sesión (`correo`, `contrasena`). Responde 401 con el mismo mensaje si el correo no existe o la contraseña es incorrecta |
 | POST | `/logout` | Cerrar sesión |
+| GET / POST | `/verificar-correo` | Verifica el correo con el enlace recibido (`token`) |
+| POST | `/reenviar-verificacion` | Envía un enlace nuevo (invalida el anterior). Si el correo ya está verificado no envía nada. Requiere sesión |
+| GET / POST | `/olvide-contrasena` | Pide el enlace para restablecer la contraseña. Muestra siempre el mismo mensaje, exista o no la cuenta |
+| GET / POST | `/restablecer-contrasena` | Cambia la contraseña con el enlace recibido (`token`, `contrasena`, `confirmacion`) |
 
 Reglas de validación: el correo debe ser válido (se guarda en minúsculas), la contraseña debe tener de 8 a 72 caracteres con al menos una letra y un número, y el rol es `cliente` o `prestador`. El rol nunca se toma de otro lugar: cualquier otro valor, como `admin`, se rechaza, y el correo siempre empieza sin verificar. El primer administrador sale del seed.
 
@@ -187,14 +199,47 @@ Están en `middleware/requireAuth.js` y se usan encadenados en las rutas:
 
 Puede registrarse, iniciar sesión (no se le bloquea la entrada), ver las solicitudes y su cuenta. **No puede publicar solicitudes (cliente) ni enviar propuestas (prestador)**: esas dos acciones responden 403.
 
+### Tokens de un solo uso
+
+La verificación del correo y la recuperación de contraseña usan el mismo mecanismo: un token aleatorio de 32 bytes (`crypto.randomBytes`) que viaja solo en el enlace del correo. En la base de datos se guarda únicamente su hash sha256, junto con el propósito, el usuario y la fecha de expiración. Un token sirve una vez, expira (24 horas el de verificación y 1 hora el de restablecer contraseña) y pedir uno nuevo invalida el anterior del mismo propósito.
+
+## Correos
+
+El envío pasa por `utils/correo.js`, que arma el correo (HTML y texto) y lo manda con nodemailer. Si el correo falla, la petición no se rompe: el aviso queda en la consola y la respuesta es la misma (por ejemplo, el registro crea la cuenta aunque el correo no salga; el usuario puede pedir que se lo reenvíen). Los enlaces se arman con `APP_URL`.
+
+### Cómo ver los correos en desarrollo (Ethereal)
+
+[Ethereal](https://ethereal.email) es un buzón de prueba gratuito: no entrega correos reales, solo los guarda para que los veas en su página.
+
+1. Corre `npm run mail:ethereal`. Crea una cuenta de prueba e imprime las variables `SMTP_*` y `MAIL_FROM`. (Si prefieres hacerlo a mano, usa el botón *Create Ethereal Account* en https://ethereal.email/create.)
+2. Copia esas líneas en tu `.env` y reinicia el servidor.
+3. Registra un usuario o usa "¿Olvidaste tu contraseña?".
+4. Entra a https://ethereal.email/login con el usuario y la contraseña que imprimió el paso 1 y abre **Messages**: ahí aparecen los correos enviados, con su enlace.
+
+Puedes usar cualquier otro servidor SMTP llenando las mismas variables.
+
+### Correos que envía el sistema
+
+| Correo | Qué lo dispara | A quién le llega |
+|---|---|---|
+| Verificación de correo | Registrarse, o pedir otro con "Reenviar enlace" | A la persona que se registró |
+| Restablecer contraseña | "¿Olvidaste tu contraseña?" (solo si el correo tiene cuenta) | A la dueña de la cuenta |
+
+### Verificación del correo y recuperación de contraseña
+
+- Al registrarse se envía un enlace de verificación (vigencia de 24 horas). El enlace abre `/verificar-correo`, que muestra un botón de confirmación; el cambio se hace con un POST para que los antivirus o previsualizadores de enlaces no gasten el token sin querer.
+- `/olvide-contrasena` muestra siempre el mismo mensaje y no espera al servidor de correo, para que nadie pueda averiguar qué correos tienen cuenta. El enlace (vigencia de 1 hora) abre `/restablecer-contrasena`.
+- Pedir un enlace nuevo invalida los anteriores. Después de restablecer, la contraseña anterior deja de funcionar.
+- Un token inválido, expirado o ya usado muestra el mismo mensaje en los tres casos.
+
 ## Mensajes en consola
 
 El servidor escribe en la consola el arranque, los registros, los inicios de sesión y los errores. Nunca se escriben contraseñas, tokens ni enlaces. Los errores inesperados muestran al usuario una página con un mensaje genérico; el detalle técnico solo sale en la consola.
 
 ## Estado actual
 
-- Listo: modelo relacional con migraciones y seed, configuración del servidor, layout de las vistas y cuentas (registro, login, logout, roles).
-- Pendiente: verificación de correo y recuperación de contraseña, perfil, solicitudes, propuestas y reseñas.
+- Listo: modelo relacional, conexión a la base de datos, migraciones, seed, estructura base del servidor, manejo de errores, cuentas (registro, login, logout, roles), verificación de correo y recuperación de contraseña por correo.
+- Pendiente: perfil, solicitudes, propuestas, reseñas y el envío de correos de aviso.
 
 ## Flujo de trabajo
 

@@ -33,6 +33,9 @@
   <% if (usuarioActual && !usuarioActual.emailVerificado) { %>
     <div class="aviso">
       Tu correo aún no está verificado. Hasta que lo verifiques no podrás publicar solicitudes ni enviar propuestas.
+      <form action="/reenviar-verificacion" method="post" class="en-linea">
+        <button type="submit" class="enlace">Reenviar enlace de verificación</button>
+      </form>
     </div>
   <% } %>
   <main class="contenido">

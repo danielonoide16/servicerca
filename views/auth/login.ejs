@@ -3,7 +3,10 @@
   <h1>Iniciar sesión</h1>
 
   <% if (locals.registrado) { %>
-    <p class="mensaje">Cuenta creada. Ahora puedes iniciar sesión.</p>
+    <p class="mensaje">Cuenta creada. Te enviamos un correo para verificarla. Ahora puedes iniciar sesión.</p>
+  <% } %>
+  <% if (locals.restablecida) { %>
+    <p class="mensaje">Contraseña actualizada. Inicia sesión con la nueva.</p>
   <% } %>
   <%- include('../partials/errores', { errores: locals.errores || [] }) %>
 
@@ -17,6 +20,7 @@
     <button type="submit">Entrar</button>
   </form>
 
+  <p><a href="/olvide-contrasena">¿Olvidaste tu contraseña?</a></p>
   <p>¿No tienes cuenta? <a href="/registro">Regístrate</a></p>
 </section>
 <%- include('../partials/footer') %>

@@ -31,4 +31,16 @@ const buscarParaLogin = (correo) => {
 const existeCorreo = (correo) =>
   Boolean(db.prepare('SELECT 1 FROM usuarios WHERE correo = ?').get(correo));
 
-module.exports = { aUsuario, crear, buscarPorId, buscarParaLogin, existeCorreo };
+const buscarPorCorreo = (correo) =>
+  aUsuario(db.prepare(`SELECT ${COLUMNAS} FROM usuarios WHERE correo = ?`).get(correo));
+
+const marcarVerificado = (id) =>
+  db.prepare('UPDATE usuarios SET email_verificado = 1 WHERE id = ?').run(id).changes === 1;
+
+const actualizarContrasena = (id, contrasenaHash) =>
+  db.prepare('UPDATE usuarios SET contrasena_hash = ? WHERE id = ?').run(contrasenaHash, id).changes === 1;
+
+module.exports = {
+  aUsuario, crear, buscarPorId, buscarPorCorreo, buscarParaLogin, existeCorreo,
+  marcarVerificado, actualizarContrasena,
+};

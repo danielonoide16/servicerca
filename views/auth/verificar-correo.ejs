@@ -1,0 +1,27 @@
+<%- include('../partials/header', { titulo: 'Verificar correo' }) %>
+<section class="tarjeta formulario">
+  <h1>Verificar correo</h1>
+
+  <% if (estado === 'confirmar') { %>
+    <p>Confirma que quieres verificar tu correo.</p>
+    <form action="/verificar-correo" method="post">
+      <input type="hidden" name="token" value="<%= token %>">
+      <button type="submit">Verificar mi correo</button>
+    </form>
+
+  <% } else if (estado === 'ok') { %>
+    <p class="mensaje">Tu correo quedó verificado. Ya puedes publicar solicitudes o enviar propuestas.</p>
+    <p><a class="boton" href="/">Continuar</a></p>
+
+  <% } else { %>
+    <%- include('../partials/errores', { errores: locals.errores || [] }) %>
+    <% if (locals.usuario && !usuario.emailVerificado) { %>
+      <form action="/reenviar-verificacion" method="post">
+        <button type="submit">Enviarme un enlace nuevo</button>
+      </form>
+    <% } else if (!locals.usuario) { %>
+      <p><a href="/login">Inicia sesión</a> para pedir un enlace nuevo.</p>
+    <% } %>
+  <% } %>
+</section>
+<%- include('../partials/footer') %>

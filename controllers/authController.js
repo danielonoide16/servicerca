@@ -1,5 +1,8 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const usuarios = require('../db/usuarioModel');
+const tokens = require('../db/tokenModel');
+const { enviarCorreo } = require('../utils/correo');
 const log = require('../utils/log');
 
 // Se compara contra este hash cuando el correo no existe, para que ambos casos tarden parecido
@@ -14,6 +17,7 @@ const verLogin = (req, res) =>
     errores: [],
     valores: {},
     registrado: req.query.registrado === '1',
+    restablecida: req.query.restablecida === '1',
   });
 
 const verRegistro = (req, res) =>
@@ -95,6 +99,15 @@ async function registroVista(req, res) {
   const hash = await bcrypt.hash(contrasena, 10);
   const usuario = usuarios.crear({ nombre, correo, contrasenaHash: hash, rol });
   log.info('Usuario registrado: ' + usuario.id + ' (' + usuario.rol + ')');
+
+  // enlace de verificación del correo
+  const token = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const expira = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  tokens.reemplazar(usuario.id, 'verify-email', tokenHash, expira);
+  const enlace = (process.env.APP_URL || 'http://localhost:3000') + '/verificar-correo?token=' + token;
+  // sin await: si el correo falla, el registro ya quedó hecho
+  enviarCorreo(usuario.correo, 'Verifica tu correo en ServiCerca', usuario.nombre, enlace, '24 horas', 'verificacion', 'Verificar mi correo');
 
   res.redirect('/login?registrado=1');
 }
