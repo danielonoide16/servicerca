@@ -1,0 +1,7 @@
+<% if (locals.errores && errores.length) { %>
+  <ul class="errores">
+    <% errores.forEach(function (e) { %>
+      <li><%= e %></li>
+    <% }) %>
+  </ul>
+<% } %>

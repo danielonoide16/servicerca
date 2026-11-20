@@ -1,0 +1,15 @@
+<%- include('partials/header', { titulo: 'Inicio' }) %>
+<section class="tarjeta">
+  <h1>ServiCerca</h1>
+  <p>Encuentra a quien necesitas para plomería, electricidad, carpintería y más, o ofrece tus servicios a clientes de tu zona.</p>
+
+  <% if (locals.usuario) { %>
+    <p>Hola, <strong><%= usuario.nombre %></strong>. Entraste como <%= usuario.rol %>.</p>
+  <% } else { %>
+    <p>
+      <a class="boton" href="/registro">Crear cuenta</a>
+      <a class="boton secundario" href="/login">Iniciar sesión</a>
+    </p>
+  <% } %>
+</section>
+<%- include('partials/footer') %>
