@@ -165,6 +165,16 @@ El servidor escribe en la consola el arranque, los registros, los inicios de ses
 
 - Listo: modelo relacional con migraciones y seed, configuración del servidor (sesiones, manejo de errores, consola) y layout de las vistas.
 - Pendiente: cuentas, verificación de correo, perfil, solicitudes, propuestas y reseñas.
+├── middleware/          # Middlewares (se irán agregando)
+├── utils/               # Utilidades
+├── views/               # Plantillas EJS
+└── public/css/          # Estilos
+```
+
+## Estado actual
+
+- Listo: modelo relacional con migraciones y datos de prueba (seed).
+- Pendiente: servidor base (errores y layout), cuentas, verificación de correo, perfil, solicitudes, propuestas y reseñas.
 
 ## Flujo de trabajo
 
