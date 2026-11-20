@@ -149,13 +149,43 @@ servicerca/
 │   ├── migrate.js       # Ejecutor de migraciones
 │   ├── migrations/      # Esquema versionado (001_inicial.sql, ...)
 │   ├── seed.js          # Datos de prueba (npm run seed)
-│   └── tipos.js         # Constantes: roles, estados y propósitos de los tokens
-├── routes/              # Rutas de las vistas (por ahora vacías)
-├── middleware/          # errorHandler (404 y errores)
+│   ├── tipos.js         # Constantes: roles, estados y propósitos de los tokens
+│   └── usuarioModel.js  # Consultas SQL de usuarios
+├── routes/              # Rutas de las vistas (auth, perfil, solicitudes, propuestas, resenas)
+├── controllers/         # Reciben la petición, validan los datos y renderizan la vista
+├── middleware/          # cargarUsuario, requireAuth (requireRole, requireVerifiedEmail) y errorHandler
 ├── utils/               # log.js: mensajes de consola
-├── views/               # Plantillas EJS (error y partials)
+├── views/               # Plantillas EJS (auth, perfil, solicitudes, partials)
 └── public/css/          # Estilos
 ```
+
+## Cuentas y sesiones
+
+Todo se hace desde las vistas (formularios HTML): el proyecto no expone una API. Cada ruta responde con una página y, cuando hay errores en un formulario, vuelve a mostrarlo con los mensajes.
+
+**Mecanismo de sesión:** `express-session` con una cookie `httpOnly` y `sameSite=lax` (`secure` en producción) que expira tras 30 minutos de inactividad. La sesión guarda solo el id del usuario: en cada petición el servidor carga la cuenta desde la base de datos (`req.user`). Por eso un cambio de rol se aplica de inmediato y, si la cuenta se elimina, la sesión deja de ser válida. Las contraseñas se guardan con bcrypt. Al registrarse hay que aceptar el aviso de privacidad (`/privacidad`).
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET / POST | `/registro` | Crear cuenta (`nombre`, `correo`, `contrasena`, `rol`, aceptar el aviso de privacidad). Responde 400 si hay datos inválidos y 409 si el correo ya existe |
+| GET / POST | `/login` | Iniciar sesión (`correo`, `contrasena`). Responde 401 con el mismo mensaje si el correo no existe o la contraseña es incorrecta |
+| POST | `/logout` | Cerrar sesión |
+
+Reglas de validación: el correo debe ser válido (se guarda en minúsculas), la contraseña debe tener de 8 a 72 caracteres con al menos una letra y un número, y el rol es `cliente` o `prestador`. El rol nunca se toma de otro lugar: cualquier otro valor, como `admin`, se rechaza, y el correo siempre empieza sin verificar. El primer administrador sale del seed.
+
+### Middlewares de acceso
+
+Están en `middleware/requireAuth.js` y se usan encadenados en las rutas:
+
+| Middleware | Qué exige | Si falla |
+|---|---|---|
+| `requireAuth` | Sesión iniciada | Redirige a `/login` |
+| `requireRole('admin')`, `requireRole('cliente', 'prestador')` | Que el rol del usuario esté en la lista | Redirige a `/login` si no hay sesión; página 403 si el rol no corresponde |
+| `requireVerifiedEmail` | Correo verificado | Página 403 |
+
+### Qué puede hacer un usuario sin verificar
+
+Puede registrarse, iniciar sesión (no se le bloquea la entrada), ver las solicitudes y su cuenta. **No puede publicar solicitudes (cliente) ni enviar propuestas (prestador)**: esas dos acciones responden 403.
 
 ## Mensajes en consola
 
@@ -163,18 +193,8 @@ El servidor escribe en la consola el arranque, los registros, los inicios de ses
 
 ## Estado actual
 
-- Listo: modelo relacional con migraciones y seed, configuración del servidor (sesiones, manejo de errores, consola) y layout de las vistas.
-- Pendiente: cuentas, verificación de correo, perfil, solicitudes, propuestas y reseñas.
-├── middleware/          # Middlewares (se irán agregando)
-├── utils/               # Utilidades
-├── views/               # Plantillas EJS
-└── public/css/          # Estilos
-```
-
-## Estado actual
-
-- Listo: modelo relacional con migraciones y datos de prueba (seed).
-- Pendiente: servidor base (errores y layout), cuentas, verificación de correo, perfil, solicitudes, propuestas y reseñas.
+- Listo: modelo relacional con migraciones y seed, configuración del servidor, layout de las vistas y cuentas (registro, login, logout, roles).
+- Pendiente: verificación de correo y recuperación de contraseña, perfil, solicitudes, propuestas y reseñas.
 
 ## Flujo de trabajo
 

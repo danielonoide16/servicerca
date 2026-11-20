@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
+const cargarUsuario = require('./middleware/cargarUsuario');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const log = require('./utils/log');
 
@@ -48,6 +49,9 @@ app.use(session({
     maxAge: 30 * 60 * 1000, // expira tras 30 min de inactividad
   },
 }));
+
+// req.user y res.locals.usuario salen de la base de datos en cada petición
+app.use(cargarUsuario);
 
 app.use('/', require('./routes/auth'));
 app.use('/perfil', require('./routes/perfil'));
