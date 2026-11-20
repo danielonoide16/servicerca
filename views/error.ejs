@@ -1,0 +1,7 @@
+<%- include('partials/header', { titulo: 'Error ' + status }) %>
+<section class="error-pagina">
+  <h1><%= status %></h1>
+  <p><%= message %></p>
+  <p><a href="/">Volver al inicio</a></p>
+</section>
+<%- include('partials/footer') %>

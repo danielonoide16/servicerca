@@ -36,6 +36,7 @@ Para correrlo sin recarga automática usar `npm start`.
 | Variable | Descripción |
 |---|---|
 | `PORT` | Puerto del servidor. Por defecto `3000`. |
+| `NODE_ENV` | `development` (por defecto) o `production`. En producción las cookies son `secure`. |
 | `SESSION_SECRET` | Texto largo y propio para firmar las sesiones. Obligatorio: si falta, el servidor no arranca. |
 | `DATABASE_PATH` | Ruta del archivo SQLite, relativa a la raíz del proyecto o absoluta. Por defecto `db/servicerca.db`. |
 
@@ -150,6 +151,20 @@ servicerca/
 │   ├── seed.js          # Datos de prueba (npm run seed)
 │   └── tipos.js         # Constantes: roles, estados y propósitos de los tokens
 ├── routes/              # Rutas de las vistas (por ahora vacías)
+├── middleware/          # errorHandler (404 y errores)
+├── utils/               # log.js: mensajes de consola
+├── views/               # Plantillas EJS (error y partials)
+└── public/css/          # Estilos
+```
+
+## Mensajes en consola
+
+El servidor escribe en la consola el arranque, los registros, los inicios de sesión y los errores. Nunca se escriben contraseñas, tokens ni enlaces. Los errores inesperados muestran al usuario una página con un mensaje genérico; el detalle técnico solo sale en la consola.
+
+## Estado actual
+
+- Listo: modelo relacional con migraciones y seed, configuración del servidor (sesiones, manejo de errores, consola) y layout de las vistas.
+- Pendiente: cuentas, verificación de correo, perfil, solicitudes, propuestas y reseñas.
 ├── middleware/          # Middlewares (se irán agregando)
 ├── utils/               # Utilidades
 ├── views/               # Plantillas EJS
