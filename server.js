@@ -59,6 +59,7 @@ app.use('/perfil', require('./routes/perfil'));
 app.use('/solicitudes', require('./routes/solicitudes'));
 app.use('/propuestas', require('./routes/propuestas'));
 app.use('/resenas', require('./routes/resenas'));
+app.use('/historial', require('./routes/historial'));
 
 // Siempre al final
 app.use(notFound);

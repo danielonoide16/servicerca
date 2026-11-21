@@ -19,6 +19,9 @@
         <a href="/propuestas">Mis propuestas</a>
         <a href="/perfil">Mi perfil</a>
       <% } %>
+      <% if (usuarioActual && (usuarioActual.rol === 'cliente' || usuarioActual.rol === 'prestador')) { %>
+        <a href="/historial">Historial</a>
+      <% } %>
       <% if (usuarioActual) { %>
         <span class="usuario"><%= usuarioActual.nombre %></span>
         <form action="/logout" method="post" class="en-linea">

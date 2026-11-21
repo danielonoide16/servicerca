@@ -1,0 +1,21 @@
+<%- include('../partials/header', { titulo: 'Detalle de la propuesta' }) %>
+<section class="tarjeta">
+  <h1>Propuesta para <%= propuesta.oficio %></h1>
+  <p><span class="estado estado-<%= propuesta.estado %>"><%= propuesta.estado %></span></p>
+
+  <h2>Tu propuesta</h2>
+  <p><strong>Precio:</strong> $<%= propuesta.precio %></p>
+  <p><strong>Disponibilidad:</strong> <%= propuesta.disponibilidad %></p>
+  <% if (propuesta.mensaje) { %>
+    <p><strong>Mensaje:</strong> <%= propuesta.mensaje %></p>
+  <% } %>
+  <p><strong>Enviada el:</strong> <%= propuesta.fecha_envio.slice(0, 10) %></p>
+
+  <h2>La solicitud</h2>
+  <p><strong>Descripción:</strong> <%= propuesta.descripcion %></p>
+  <p><strong>Zona:</strong> <%= propuesta.zona %></p>
+  <p><strong>Estado de la solicitud:</strong> <span class="estado estado-<%= propuesta.estado_solicitud %>"><%= propuesta.estado_solicitud %></span></p>
+
+  <p><a href="/historial">Volver a mi historial</a></p>
+</section>
+<%- include('../partials/footer') %>

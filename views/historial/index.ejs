@@ -1,0 +1,53 @@
+<%- include('../partials/header', { titulo: 'Mi historial' }) %>
+<section class="tarjeta">
+  <% if (tipo === 'cliente') { %>
+    <h1>Mis solicitudes</h1>
+    <% if (solicitudes.length === 0) { %>
+      <p>Todavía no has publicado ninguna solicitud.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr><th>Fecha</th><th>Oficio</th><th>Descripción</th><th>Zona</th><th>Propuestas</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% solicitudes.forEach(function (s) { %>
+            <tr>
+              <td><%= s.fecha_publicacion.slice(0, 10) %></td>
+              <td><%= s.oficio %></td>
+              <td><%= s.descripcion %></td>
+              <td><%= s.zona %></td>
+              <td><%= s.num_propuestas %></td>
+              <td><span class="estado estado-<%= s.estado %>"><%= s.estado %></span></td>
+              <td><a href="/historial/solicitudes/<%= s.id %>">Ver</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  <% } else { %>
+    <h1>Mis propuestas</h1>
+    <% if (propuestas.length === 0) { %>
+      <p>Todavía no has enviado ninguna propuesta.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr><th>Fecha</th><th>Oficio</th><th>Solicitud</th><th>Zona</th><th>Precio</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% propuestas.forEach(function (p) { %>
+            <tr>
+              <td><%= p.fecha_envio.slice(0, 10) %></td>
+              <td><%= p.oficio %></td>
+              <td><%= p.descripcion %></td>
+              <td><%= p.zona %></td>
+              <td>$<%= p.precio %></td>
+              <td><span class="estado estado-<%= p.estado %>"><%= p.estado %></span></td>
+              <td><a href="/historial/propuestas/<%= p.id %>">Ver</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  <% } %>
+</section>
+<%- include('../partials/footer') %>

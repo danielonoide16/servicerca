@@ -1,0 +1,32 @@
+<%- include('../partials/header', { titulo: 'Mi perfil' }) %>
+<section class="tarjeta formulario">
+  <h1>Mi perfil de prestador</h1>
+  <p>Esto es lo que verán los clientes cuando reciban una propuesta tuya.</p>
+
+  <% if (guardado) { %>
+    <p class="mensaje">Tu perfil se guardó correctamente.</p>
+  <% } %>
+
+  <%- include('../partials/errores', { errores: errores }) %>
+
+  <form action="/perfil" method="post" novalidate>
+    <label for="descripcion">Descripción</label>
+    <textarea id="descripcion" name="descripcion" maxlength="500" placeholder="Cuéntales a los clientes tu experiencia y qué trabajos haces"><%= descripcion %></textarea>
+    <small>Opcional. Máximo 500 caracteres.</small>
+
+    <label for="zona">Zona de servicio</label>
+    <input type="text" id="zona" name="zona" value="<%= zonaServicio %>" maxlength="100" placeholder="Por ejemplo: Centro" required>
+
+    <label>Oficios que ofreces</label>
+    <% catalogo.forEach(function (oficio) { %>
+      <label class="casilla">
+        <input type="checkbox" name="oficios" value="<%= oficio.id %>" <%= oficiosElegidos.includes(oficio.id) ? 'checked' : '' %>>
+        <%= oficio.nombre %>
+      </label>
+    <% }) %>
+    <small>Selecciona al menos uno.</small>
+
+    <button type="submit">Guardar perfil</button>
+  </form>
+</section>
+<%- include('../partials/footer') %>
