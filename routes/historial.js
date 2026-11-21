@@ -4,6 +4,20 @@ const { requireAuth } = require('../middleware/requireAuth');
 
 const router = express.Router();
 
+// Convierte el id de la URL en número. Regresa null si no es un entero positivo
+function leerId(texto) {
+  const id = Number(texto);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function noEncontrado(res, nombre) {
+  return res.status(404).render('error', { status: 404, message: `No encontramos esa ${nombre}` });
+}
+
+function sinPermiso(res, nombre) {
+  return res.status(403).render('error', { status: 403, message: `No tienes permiso para ver esta ${nombre}` });
+}
+
 // RF-12: el cliente ve sus solicitudes y el prestador sus propuestas, con su estado
 router.get('/', requireAuth, (req, res) => {
   const usuario = req.user;
@@ -40,10 +54,8 @@ router.get('/', requireAuth, (req, res) => {
 
 // RF-12: detalle de una solicitud del cliente
 router.get('/solicitudes/:id', requireAuth, (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id) || id <= 0) {
-    return res.status(404).render('error', { status: 404, message: 'No encontramos esa solicitud' });
-  }
+  const id = leerId(req.params.id);
+  if (!id) return noEncontrado(res, 'solicitud');
 
   const solicitud = db
     .prepare(
@@ -53,12 +65,8 @@ router.get('/solicitudes/:id', requireAuth, (req, res) => {
        WHERE s.id = ?`,
     )
     .get(id);
-  if (!solicitud) {
-    return res.status(404).render('error', { status: 404, message: 'No encontramos esa solicitud' });
-  }
-  if (solicitud.cliente_id !== req.user.id) {
-    return res.status(403).render('error', { status: 403, message: 'No tienes permiso para ver esta solicitud' });
-  }
+  if (!solicitud) return noEncontrado(res, 'solicitud');
+  if (solicitud.cliente_id !== req.user.id) return sinPermiso(res, 'solicitud');
 
   const resena = db
     .prepare('SELECT calificacion, comentario, fecha FROM resenas WHERE solicitud_id = ?')
@@ -68,10 +76,8 @@ router.get('/solicitudes/:id', requireAuth, (req, res) => {
 
 // RF-12: detalle de una propuesta del prestador
 router.get('/propuestas/:id', requireAuth, (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id) || id <= 0) {
-    return res.status(404).render('error', { status: 404, message: 'No encontramos esa propuesta' });
-  }
+  const id = leerId(req.params.id);
+  if (!id) return noEncontrado(res, 'propuesta');
 
   const propuesta = db
     .prepare(
@@ -83,12 +89,8 @@ router.get('/propuestas/:id', requireAuth, (req, res) => {
        WHERE p.id = ?`,
     )
     .get(id);
-  if (!propuesta) {
-    return res.status(404).render('error', { status: 404, message: 'No encontramos esa propuesta' });
-  }
-  if (propuesta.prestador_id !== req.user.id) {
-    return res.status(403).render('error', { status: 403, message: 'No tienes permiso para ver esta propuesta' });
-  }
+  if (!propuesta) return noEncontrado(res, 'propuesta');
+  if (propuesta.prestador_id !== req.user.id) return sinPermiso(res, 'propuesta');
 
   res.render('historial/propuesta', { titulo: 'Detalle de la propuesta', propuesta });
 });

@@ -4,6 +4,14 @@ const PerfilPrestador = require('../clases/PerfilPrestador');
 
 const router = express.Router();
 
+// Solo los prestadores tienen perfil
+function soloPrestadores(req, res, next) {
+  if (req.user.rol !== 'prestador') {
+    return res.status(403).render('error', { status: 403, message: 'Solo los prestadores tienen perfil' });
+  }
+  next();
+}
+
 function mostrarFormulario(res, status, usuario, descripcion, zonaServicio, oficiosElegidos, catalogo, errores, guardado) {
   res.status(status).render('perfil/editar', {
     titulo: 'Mi perfil',
@@ -18,11 +26,7 @@ function mostrarFormulario(res, status, usuario, descripcion, zonaServicio, ofic
 }
 
 // RF-03: ver el perfil
-router.get('/', requireAuth, (req, res) => {
-  if (req.user.rol !== 'prestador') {
-    return res.status(403).render('error', { status: 403, message: 'Solo los prestadores tienen perfil' });
-  }
-
+router.get('/', requireAuth, soloPrestadores, (req, res) => {
   const perfil = PerfilPrestador.buscarPorUsuario(req.user.id);
   const catalogo = PerfilPrestador.catalogoOficios();
 
@@ -37,11 +41,7 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // RF-03: guardar el perfil
-router.post('/', requireAuth, (req, res) => {
-  if (req.user.rol !== 'prestador') {
-    return res.status(403).render('error', { status: 403, message: 'Solo los prestadores tienen perfil' });
-  }
-
+router.post('/', requireAuth, soloPrestadores, (req, res) => {
   const descripcion = typeof req.body.descripcion === 'string' ? req.body.descripcion : '';
   const zonaServicio = typeof req.body.zona === 'string' ? req.body.zona : '';
 
