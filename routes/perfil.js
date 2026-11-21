@@ -12,17 +12,9 @@ function soloPrestadores(req, res, next) {
   next();
 }
 
-function mostrarFormulario(res, status, usuario, descripcion, zonaServicio, oficiosElegidos, catalogo, errores, guardado) {
-  res.status(status).render('perfil/editar', {
-    titulo: 'Mi perfil',
-    usuario,
-    descripcion,
-    zonaServicio,
-    oficiosElegidos,
-    catalogo,
-    errores,
-    guardado,
-  });
+// formulario: { usuario, descripcion, zonaServicio, oficiosElegidos, catalogo, errores, guardado }
+function mostrarFormulario(res, status, formulario) {
+  res.status(status).render('perfil/editar', { titulo: 'Mi perfil', ...formulario });
 }
 
 // RF-03: ver el perfil
@@ -31,12 +23,25 @@ router.get('/', requireAuth, soloPrestadores, (req, res) => {
   const catalogo = PerfilPrestador.catalogoOficios();
 
   if (perfil) {
-    mostrarFormulario(
-      res, 200, req.user, perfil.descripcion || '', perfil.zonaServicio,
-      perfil.oficios.map((o) => o.id), catalogo, [], req.query.guardado === '1',
-    );
+    mostrarFormulario(res, 200, {
+      usuario: req.user,
+      descripcion: perfil.descripcion || '',
+      zonaServicio: perfil.zonaServicio,
+      oficiosElegidos: perfil.oficios.map((o) => o.id),
+      catalogo,
+      errores: [],
+      guardado: req.query.guardado === '1',
+    });
   } else {
-    mostrarFormulario(res, 200, req.user, '', '', [], catalogo, [], false);
+    mostrarFormulario(res, 200, {
+      usuario: req.user,
+      descripcion: '',
+      zonaServicio: '',
+      oficiosElegidos: [],
+      catalogo,
+      errores: [],
+      guardado: false,
+    });
   }
 });
 
@@ -61,7 +66,15 @@ router.post('/', requireAuth, soloPrestadores, (req, res) => {
 
   const errores = perfil.actualizarPerfil(descripcion, zonaServicio, oficioIds);
   if (errores.length > 0) {
-    return mostrarFormulario(res, 400, req.user, descripcion, zonaServicio, oficioIds, catalogo, errores, false);
+    return mostrarFormulario(res, 400, {
+      usuario: req.user,
+      descripcion,
+      zonaServicio,
+      oficiosElegidos: oficioIds,
+      catalogo,
+      errores,
+      guardado: false,
+    });
   }
 
   res.redirect('/perfil?guardado=1');
