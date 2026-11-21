@@ -156,9 +156,9 @@ servicerca/
 │   ├── migrations/      # Esquema versionado (001_inicial.sql, ...)
 │   ├── seed.js          # Datos de prueba (npm run seed)
 │   ├── tipos.js         # Constantes: roles, estados y propósitos de los tokens
-│   ├── usuarioModel.js  # Consultas SQL de usuarios
 │   └── tokenModel.js    # Consultas SQL de los tokens de un solo uso
-├── routes/              # Rutas de las vistas (auth, cuenta, perfil, solicitudes, propuestas, resenas)
+├── clases/              # Clases del dominio (Usuario, PerfilPrestador, ...)
+├── routes/              # Rutas de las vistas (auth, cuenta, perfil, historial, solicitudes, propuestas, resenas)
 ├── controllers/         # Reciben la petición, validan los datos y renderizan la vista
 ├── middleware/          # cargarUsuario, requireAuth (requireRole, requireVerifiedEmail) y errorHandler
 ├── utils/               # correo.js (envío de correos con nodemailer) y log.js (mensajes de consola)
