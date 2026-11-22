@@ -15,11 +15,11 @@
     </select>
 
     <label for="descripcion">Descripción del trabajo</label>
-    <textarea id="descripcion" name="descripcion" maxlength="500" placeholder="Por ejemplo: fuga de agua debajo del lavabo de la cocina" required><%= valores.descripcion %></textarea>
-    <small>De 10 a 500 caracteres.</small>
+    <textarea id="descripcion" name="descripcion" maxlength="<%= limites.DESCRIPCION_MAX %>" placeholder="Por ejemplo: fuga de agua debajo del lavabo de la cocina" required><%= valores.descripcion %></textarea>
+    <small>De <%= limites.DESCRIPCION_MIN %> a <%= limites.DESCRIPCION_MAX %> caracteres.</small>
 
     <label for="zona">Zona</label>
-    <input type="text" id="zona" name="zona" value="<%= valores.zona %>" maxlength="100" placeholder="Por ejemplo: Centro" required>
+    <input type="text" id="zona" name="zona" value="<%= valores.zona %>" maxlength="<%= limites.ZONA_MAX %>" placeholder="Por ejemplo: Centro" required>
 
     <button type="submit">Publicar solicitud</button>
   </form>

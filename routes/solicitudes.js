@@ -3,6 +3,7 @@ const { requireAuth, requireRole, requireVerifiedEmail } = require('../middlewar
 const SolicitudTrabajo = require('../clases/SolicitudTrabajo');
 const Resena = require('../clases/Resena');
 const Propuesta = require('../clases/Propuesta');
+const { ESTADOS_SOLICITUD } = require('../db/tipos');
 
 const router = express.Router();
 
@@ -28,6 +29,7 @@ router.get('/', requireRole('prestador'), (req, res) => {
     solicitudes: SolicitudTrabajo.buscar(oficioId, zona),
     catalogo: SolicitudTrabajo.catalogoOficios(),
     filtros: { oficioId, zona },
+    limites: SolicitudTrabajo.LIMITES,
   });
 });
 
@@ -38,6 +40,7 @@ router.get('/nueva', requireRole('cliente'), requireVerifiedEmail, (req, res) =>
     catalogo: SolicitudTrabajo.catalogoOficios(),
     valores: { oficioId: null, descripcion: '', zona: '' },
     errores: [],
+    limites: SolicitudTrabajo.LIMITES,
   });
 });
 
@@ -54,6 +57,7 @@ router.post('/', requireRole('cliente'), requireVerifiedEmail, (req, res) => {
       catalogo: SolicitudTrabajo.catalogoOficios(),
       valores: { oficioId, descripcion, zona },
       errores,
+      limites: SolicitudTrabajo.LIMITES,
     });
   }
   res.redirect('/solicitudes/mias?publicada=1');
@@ -83,7 +87,7 @@ router.get('/:id', requireAuth, (req, res) => {
   if (!solicitud) return;
 
   const esDueno = solicitud.clienteId === req.user.id;
-  const prestadorPuedeVer = req.user.rol === 'prestador' && solicitud.estado === 'Publicada';
+  const prestadorPuedeVer = req.user.rol === 'prestador' && solicitud.estado === ESTADOS_SOLICITUD.PUBLICADA;
   if (!esDueno && !prestadorPuedeVer) {
     return res.status(403).render('error', { status: 403, message: 'No tienes permiso para ver esta solicitud' });
   }

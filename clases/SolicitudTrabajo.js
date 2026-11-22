@@ -1,4 +1,13 @@
 const db = require('../db/db');
+const { ESTADOS_SOLICITUD, ESTADOS_PROPUESTA } = require('../db/tipos');
+
+// Límites de los datos de una solicitud y de la búsqueda
+const LIMITES = {
+  DESCRIPCION_MIN: 10,
+  DESCRIPCION_MAX: 500,
+  ZONA_MAX: 100,
+  RESULTADOS_BUSQUEDA: 50,
+};
 
 // Trabajo que publica un cliente para que los prestadores le manden propuestas.
 // RF-04 publicar, RF-05 buscar, RF-09 completar y RF-10 cancelar.
@@ -28,16 +37,16 @@ class SolicitudTrabajo {
       }
     }
 
-    if (!descripcion || descripcion.trim().length < 10) {
-      errores.push('Describe el trabajo con al menos 10 caracteres');
-    } else if (descripcion.trim().length > 500) {
-      errores.push('La descripción debe tener como máximo 500 caracteres');
+    if (!descripcion || descripcion.trim().length < LIMITES.DESCRIPCION_MIN) {
+      errores.push(`Describe el trabajo con al menos ${LIMITES.DESCRIPCION_MIN} caracteres`);
+    } else if (descripcion.trim().length > LIMITES.DESCRIPCION_MAX) {
+      errores.push(`La descripción debe tener como máximo ${LIMITES.DESCRIPCION_MAX} caracteres`);
     }
 
     if (!zona || zona.trim() === '') {
       errores.push('La zona es obligatoria');
-    } else if (zona.trim().length > 100) {
-      errores.push('La zona debe tener como máximo 100 caracteres');
+    } else if (zona.trim().length > LIMITES.ZONA_MAX) {
+      errores.push(`La zona debe tener como máximo ${LIMITES.ZONA_MAX} caracteres`);
     }
 
     if (errores.length > 0) return { errores, solicitud: null };
@@ -45,9 +54,9 @@ class SolicitudTrabajo {
     const resultado = db
       .prepare(
         `INSERT INTO solicitudes (cliente_id, oficio_id, descripcion, zona, estado)
-         VALUES (?, ?, ?, ?, 'Publicada')`,
+         VALUES (?, ?, ?, ?, ?)`,
       )
-      .run(clienteId, oficioId, descripcion.trim(), zona.trim());
+      .run(clienteId, oficioId, descripcion.trim(), zona.trim(), ESTADOS_SOLICITUD.PUBLICADA);
 
     return { errores: [], solicitud: SolicitudTrabajo.buscarPorId(Number(resultado.lastInsertRowid)) };
   }
@@ -57,21 +66,22 @@ class SolicitudTrabajo {
     let sql = `SELECT s.*, o.nombre AS oficio
                FROM solicitudes s
                JOIN oficios o ON o.id = s.oficio_id
-               WHERE s.estado = 'Publicada'`;
-    const parametros = [];
+               WHERE s.estado = ?`;
+    const parametros = [ESTADOS_SOLICITUD.PUBLICADA];
 
     if (oficioId) {
       sql += ' AND s.oficio_id = ?';
       parametros.push(oficioId);
     }
     if (zona && zona.trim() !== '') {
-      if (zona.trim().length > 100) {
-        zona = zona.trim().slice(0, 100);
+      if (zona.trim().length > LIMITES.ZONA_MAX) {
+        zona = zona.trim().slice(0, LIMITES.ZONA_MAX);
       }
       sql += ' AND s.zona LIKE ?';
       parametros.push('%' + zona.trim() + '%');
     }
-    sql += ' ORDER BY s.fecha_publicacion DESC, s.id DESC LIMIT 50';
+    sql += ' ORDER BY s.fecha_publicacion DESC, s.id DESC LIMIT ?';
+    parametros.push(LIMITES.RESULTADOS_BUSQUEDA);
 
     return db.prepare(sql).all(...parametros).map((fila) => new SolicitudTrabajo(fila));
   }
@@ -113,12 +123,12 @@ class SolicitudTrabajo {
     if (this.clienteId !== usuarioId) {
       return 'No tienes permiso para modificar esta solicitud';
     }
-    if (this.estado !== 'Asignada') {
+    if (this.estado !== ESTADOS_SOLICITUD.ASIGNADA) {
       return 'Solo puedes marcar como completada una solicitud asignada';
     }
 
-    db.prepare("UPDATE solicitudes SET estado = 'Completada' WHERE id = ?").run(this.id);
-    this.estado = 'Completada';
+    db.prepare('UPDATE solicitudes SET estado = ? WHERE id = ?').run(ESTADOS_SOLICITUD.COMPLETADA, this.id);
+    this.estado = ESTADOS_SOLICITUD.COMPLETADA;
     return null;
   }
 
@@ -128,32 +138,31 @@ class SolicitudTrabajo {
     if (this.clienteId !== usuarioId) {
       return 'No tienes permiso para modificar esta solicitud';
     }
-    if (this.estado !== 'Publicada' && this.estado !== 'Asignada') {
+    if (this.estado !== ESTADOS_SOLICITUD.PUBLICADA && this.estado !== ESTADOS_SOLICITUD.ASIGNADA) {
       return 'Solo puedes cancelar una solicitud publicada o asignada';
     }
 
     const cancelarTodo = db.transaction(() => {
-      db.prepare("UPDATE solicitudes SET estado = 'Cancelada' WHERE id = ?").run(this.id);
-      db.prepare(
-        "UPDATE propuestas SET estado = 'Rechazada' WHERE solicitud_id = ? AND estado = 'Enviada'",
-      ).run(this.id);
+      db.prepare('UPDATE solicitudes SET estado = ? WHERE id = ?').run(ESTADOS_SOLICITUD.CANCELADA, this.id);
+      db.prepare('UPDATE propuestas SET estado = ? WHERE solicitud_id = ? AND estado = ?')
+        .run(ESTADOS_PROPUESTA.RECHAZADA, this.id, ESTADOS_PROPUESTA.ENVIADA);
     });
     cancelarTodo();
-    this.estado = 'Cancelada';
+    this.estado = ESTADOS_SOLICITUD.CANCELADA;
     return null;
   }
 
   // Lo usan las vistas para mostrar u ocultar los botones
   puedeCompletarse() {
-    return this.estado === 'Asignada';
+    return this.estado === ESTADOS_SOLICITUD.ASIGNADA;
   }
 
   puedeCancelarse() {
-    return this.estado === 'Publicada' || this.estado === 'Asignada';
+    return this.estado === ESTADOS_SOLICITUD.PUBLICADA || this.estado === ESTADOS_SOLICITUD.ASIGNADA;
   }
 
   puedeResenarse() {
-    return this.estado === 'Completada';
+    return this.estado === ESTADOS_SOLICITUD.COMPLETADA;
   }
 
   fechaCorta() {
@@ -162,3 +171,4 @@ class SolicitudTrabajo {
 }
 
 module.exports = SolicitudTrabajo;
+module.exports.LIMITES = LIMITES;

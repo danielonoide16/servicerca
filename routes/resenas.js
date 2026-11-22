@@ -36,6 +36,7 @@ router.get('/nueva/:solicitudId', requireRole('cliente'), (req, res) => {
     solicitud,
     valores: { calificacion: null, comentario: '' },
     errores: [],
+    limites: Resena.LIMITES,
   });
 });
 
@@ -54,6 +55,7 @@ router.post('/nueva/:solicitudId', requireRole('cliente'), (req, res) => {
       solicitud,
       valores: { calificacion, comentario },
       errores,
+      limites: Resena.LIMITES,
     });
   }
   res.redirect('/solicitudes/mias?resena=1');
