@@ -1,0 +1,24 @@
+<%- include('../partials/header', { titulo: 'Dejar reseña' }) %>
+<section class="tarjeta formulario">
+  <h1>Reseña del trabajo</h1>
+  <p><strong><%= solicitud.oficio %>:</strong> <%= solicitud.descripcion %></p>
+
+  <%- include('../partials/errores', { errores: errores }) %>
+
+  <form action="/resenas/nueva/<%= solicitud.id %>" method="post" novalidate>
+    <label>Calificación</label>
+    <% [1, 2, 3, 4, 5].forEach(function (n) { %>
+      <label class="casilla">
+        <input type="radio" name="calificacion" value="<%= n %>" <%= valores.calificacion === n ? 'checked' : '' %> required>
+        <%= n %> <%= n === 1 ? 'estrella' : 'estrellas' %>
+      </label>
+    <% }) %>
+
+    <label for="comentario">Comentario</label>
+    <textarea id="comentario" name="comentario" maxlength="500" placeholder="¿Cómo fue el trabajo?"><%= valores.comentario %></textarea>
+    <small>Opcional. Máximo 500 caracteres.</small>
+
+    <button type="submit">Guardar reseña</button>
+  </form>
+</section>
+<%- include('../partials/footer') %>
