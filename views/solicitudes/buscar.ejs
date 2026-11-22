@@ -13,7 +13,7 @@
     </div>
     <div>
       <label for="zona">Zona</label>
-      <input type="text" id="zona" name="zona" value="<%= filtros.zona %>" maxlength="100" placeholder="Por ejemplo: Centro">
+      <input type="text" id="zona" name="zona" value="<%= filtros.zona %>" maxlength="<%= limites.ZONA_MAX %>" placeholder="Por ejemplo: Centro">
     </div>
     <div>
       <button type="submit">Buscar</button>
