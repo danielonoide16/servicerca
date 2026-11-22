@@ -1,0 +1,47 @@
+<%- include('../partials/header', { titulo: 'Mis solicitudes' }) %>
+<section class="tarjeta">
+  <h1>Mis solicitudes</h1>
+  <% if (aviso) { %>
+    <p class="mensaje"><%= aviso %></p>
+  <% } %>
+  <p><a class="boton" href="/solicitudes/nueva">Nueva solicitud</a></p>
+
+  <% if (solicitudes.length === 0) { %>
+    <p>Todavía no has publicado ninguna solicitud.</p>
+  <% } else { %>
+    <table>
+      <thead>
+        <tr><th>Fecha</th><th>Oficio</th><th>Descripción</th><th>Zona</th><th>Estado</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        <% solicitudes.forEach(function (s) { %>
+          <tr>
+            <td><%= s.fechaCorta() %></td>
+            <td><%= s.oficio %></td>
+            <td><%= s.descripcion %></td>
+            <td><%= s.zona %></td>
+            <td><span class="estado estado-<%= s.estado %>"><%= s.estado %></span></td>
+            <td class="acciones">
+              <a href="/solicitudes/<%= s.id %>">Ver</a>
+              <% if (s.puedeCompletarse()) { %>
+                <form action="/solicitudes/<%= s.id %>/completar" method="post" class="en-linea">
+                  <button type="submit" class="enlace">Marcar como completada</button>
+                </form>
+              <% } %>
+              <% if (s.puedeCancelarse()) { %>
+                <form action="/solicitudes/<%= s.id %>/cancelar" method="post" class="en-linea"
+                      onsubmit="return confirm('¿Seguro que quieres cancelar esta solicitud?');">
+                  <button type="submit" class="enlace peligro">Cancelar</button>
+                </form>
+              <% } %>
+              <% if (s.puedeResenarse() && !conResena.has(s.id)) { %>
+                <a href="/resenas/nueva/<%= s.id %>">Dejar reseña</a>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+<%- include('../partials/footer') %>
