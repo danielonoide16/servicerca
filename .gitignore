@@ -2,3 +2,7 @@ node_modules/
 .env
 db/*.db
 .DS_Store
+
+# Documentos de la entrega (no se suben al repositorio)
+*.docx
+~$*
