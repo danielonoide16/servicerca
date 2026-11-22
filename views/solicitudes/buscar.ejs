@@ -33,7 +33,7 @@
       <tbody>
         <% solicitudes.forEach(function (s) { %>
           <tr>
-            <td><%= s.fechaCorta() %></td>
+            <td><%= s.fechaPublicacion.slice(0, 10) %></td>
             <td><%= s.oficio %></td>
             <td><%= s.descripcion %></td>
             <td><%= s.zona %></td>

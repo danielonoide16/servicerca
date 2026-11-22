@@ -3,6 +3,7 @@ const { requireAuth, requireRole, requireVerifiedEmail } = require('../middlewar
 const SolicitudTrabajo = require('../clases/SolicitudTrabajo');
 const Resena = require('../clases/Resena');
 const Propuesta = require('../clases/Propuesta');
+const PerfilPrestador = require('../clases/PerfilPrestador');
 const { ESTADOS_SOLICITUD } = require('../db/tipos');
 
 const router = express.Router();
@@ -27,7 +28,7 @@ router.get('/', requireRole('prestador'), (req, res) => {
   res.render('solicitudes/buscar', {
     titulo: 'Buscar solicitudes',
     solicitudes: SolicitudTrabajo.buscar(oficioId, zona),
-    catalogo: SolicitudTrabajo.catalogoOficios(),
+    catalogo: PerfilPrestador.catalogoOficios(),
     filtros: { oficioId, zona },
     limites: SolicitudTrabajo.LIMITES,
   });
@@ -37,7 +38,7 @@ router.get('/', requireRole('prestador'), (req, res) => {
 router.get('/nueva', requireRole('cliente'), requireVerifiedEmail, (req, res) => {
   res.render('solicitudes/nueva', {
     titulo: 'Nueva solicitud',
-    catalogo: SolicitudTrabajo.catalogoOficios(),
+    catalogo: PerfilPrestador.catalogoOficios(),
     valores: { oficioId: null, descripcion: '', zona: '' },
     errores: [],
     limites: SolicitudTrabajo.LIMITES,
@@ -54,7 +55,7 @@ router.post('/', requireRole('cliente'), requireVerifiedEmail, (req, res) => {
   if (errores.length > 0) {
     return res.status(400).render('solicitudes/nueva', {
       titulo: 'Nueva solicitud',
-      catalogo: SolicitudTrabajo.catalogoOficios(),
+      catalogo: PerfilPrestador.catalogoOficios(),
       valores: { oficioId, descripcion, zona },
       errores,
       limites: SolicitudTrabajo.LIMITES,
