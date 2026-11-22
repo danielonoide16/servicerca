@@ -104,7 +104,7 @@ form label.casilla { font-weight: 400; }
 .filtros label { margin-top: 0; }
 .acciones { white-space: nowrap; }
 .acciones > * { margin-right: 0.5rem; }
-.enlace.peligro { color: var(--color-error); }
+.enlace.peligro { color: var(--color-error); background: none; }
 input[type="radio"] { width: auto; }
 .acciones button { margin-top: 0; }
 .botones { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
