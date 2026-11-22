@@ -1,0 +1,40 @@
+<%- include('../partials/header', { titulo: 'Solicitud de ' + solicitud.oficio }) %>
+<section class="tarjeta">
+  <h1>Solicitud de <%= solicitud.oficio %></h1>
+  <p><span class="estado estado-<%= solicitud.estado %>"><%= solicitud.estado %></span></p>
+  <p><strong>Descripción:</strong> <%= solicitud.descripcion %></p>
+  <p><strong>Zona:</strong> <%= solicitud.zona %></p>
+  <p><strong>Publicada el:</strong> <%= solicitud.fechaCorta() %></p>
+
+  <% if (esDueno) { %>
+    <div class="botones">
+      <% if (solicitud.puedeCompletarse()) { %>
+        <form action="/solicitudes/<%= solicitud.id %>/completar" method="post" class="en-linea">
+          <button type="submit">Marcar como completada</button>
+        </form>
+      <% } %>
+      <% if (solicitud.puedeCancelarse()) { %>
+        <form action="/solicitudes/<%= solicitud.id %>/cancelar" method="post" class="en-linea"
+              onsubmit="return confirm('¿Seguro que quieres cancelar esta solicitud?');">
+          <button type="submit" class="peligro">Cancelar solicitud</button>
+        </form>
+      <% } %>
+      <% if (solicitud.puedeResenarse() && !resena) { %>
+        <a class="boton" href="/resenas/nueva/<%= solicitud.id %>">Dejar reseña</a>
+      <% } %>
+    </div>
+
+    <% if (resena) { %>
+      <h2>Tu reseña</h2>
+      <p><strong>Calificación:</strong> <%= resena.calificacion %> de 5</p>
+      <% if (resena.comentario) { %>
+        <p><%= resena.comentario %></p>
+      <% } %>
+    <% } %>
+
+    <p><a href="/solicitudes/mias">Volver a mis solicitudes</a></p>
+  <% } else { %>
+    <p><a href="/solicitudes">Volver a la búsqueda</a></p>
+  <% } %>
+</section>
+<%- include('../partials/footer') %>

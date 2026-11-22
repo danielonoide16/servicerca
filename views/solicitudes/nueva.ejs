@@ -1,0 +1,27 @@
+<%- include('../partials/header', { titulo: 'Nueva solicitud' }) %>
+<section class="tarjeta formulario">
+  <h1>Publicar una solicitud</h1>
+  <p>Cuéntales a los prestadores qué necesitas y en qué zona. Te llegarán sus propuestas.</p>
+
+  <%- include('../partials/errores', { errores: errores }) %>
+
+  <form action="/solicitudes" method="post" novalidate>
+    <label for="oficio">Oficio</label>
+    <select id="oficio" name="oficio" required>
+      <option value="">Elige un oficio</option>
+      <% catalogo.forEach(function (oficio) { %>
+        <option value="<%= oficio.id %>" <%= valores.oficioId === oficio.id ? 'selected' : '' %>><%= oficio.nombre %></option>
+      <% }) %>
+    </select>
+
+    <label for="descripcion">Descripción del trabajo</label>
+    <textarea id="descripcion" name="descripcion" maxlength="500" placeholder="Por ejemplo: fuga de agua debajo del lavabo de la cocina" required><%= valores.descripcion %></textarea>
+    <small>De 10 a 500 caracteres.</small>
+
+    <label for="zona">Zona</label>
+    <input type="text" id="zona" name="zona" value="<%= valores.zona %>" maxlength="100" placeholder="Por ejemplo: Centro" required>
+
+    <button type="submit">Publicar solicitud</button>
+  </form>
+</section>
+<%- include('../partials/footer') %>
