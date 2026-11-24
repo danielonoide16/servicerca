@@ -157,7 +157,7 @@ servicerca/
 │   ├── seed.js          # Datos de prueba (npm run seed)
 │   ├── tipos.js         # Constantes: roles, estados y propósitos de los tokens
 │   └── tokenModel.js    # Consultas SQL de los tokens de un solo uso
-├── clases/              # Clases del dominio (PerfilPrestador, SolicitudTrabajo, Resena)
+├── clases/              # Clases del dominio (Usuario, PerfilPrestador, SolicitudTrabajo, Resena, Propuesta, Notificacion)
 ├── routes/              # Rutas de las vistas (auth, cuenta, perfil, historial, solicitudes, propuestas, resenas)
 ├── controllers/         # Reciben la petición, validan los datos y renderizan la vista
 ├── middleware/          # cargarUsuario, requireAuth (requireRole, requireVerifiedEmail) y errorHandler
@@ -250,10 +250,23 @@ La lógica vive en las clases `SolicitudTrabajo` y `Resena` (carpeta `clases/`);
 | POST | `/solicitudes/:id/cancelar` | Cliente dueño | RF-10: `Publicada` o `Asignada → Cancelada`. Las propuestas que seguían `Enviada` quedan `Rechazada` |
 | GET / POST | `/resenas/nueva/:solicitudId` | Cliente dueño | RF-11: calificación de 1 a 5 y comentario opcional (hasta 500 caracteres). Solo con la solicitud `Completada` y una vez por solicitud |
 
+## Propuestas y avisos
+
+La lógica vive en las clases `Propuesta` y `Notificacion` (carpeta `clases/`).
+
+| Método | Ruta | Quién | Descripción |
+|---|---|---|---|
+| GET / POST | `/propuestas/nueva/:solicitudId` | Prestador con correo verificado | RF-06: enviar una propuesta (`precio` mayor a 0, `disponibilidad` de hasta 100 caracteres, `mensaje` opcional de hasta 500). Solo a solicitudes `Publicada` y una vez por solicitud |
+| GET | `/solicitudes/:id` | Cliente dueño | RF-07: el detalle muestra las propuestas recibidas. Nadie más ve esa lista |
+| POST | `/propuestas/:id/aceptar` | Cliente dueño | RF-08: la propuesta queda `Aceptada`, las demás `Rechazada` y la solicitud `Asignada`. 403 si la solicitud no es suya, 409 si ya tiene una propuesta aceptada |
+| GET | `/propuestas` | Prestador | Lleva al historial, que muestra sus propuestas (RF-12) |
+
+RF-13: al enviar una propuesta se le avisa por correo al cliente, y al aceptarla se le avisa al prestador. Cada aviso queda en la tabla `notificaciones` como `Enviado` o `Fallido`. Si el correo no está configurado o falla, la propuesta se guarda igual y el aviso queda como `Fallido`.
+
 ## Estado actual
 
-- Listo: modelo relacional, conexión a la base de datos, migraciones, seed, estructura base del servidor, manejo de errores, cuentas (registro, login, logout, roles), verificación de correo y recuperación de contraseña por correo, perfil del prestador, historial, publicar y buscar solicitudes, completarlas, cancelarlas y reseñarlas.
-- Pendiente: propuestas (enviar, ver y aceptar) y el envío de correos de aviso.
+- Listo: modelo relacional, conexión a la base de datos, migraciones, seed, estructura base del servidor, manejo de errores, cuentas (registro, login, logout, roles), verificación de correo y recuperación de contraseña por correo, perfil del prestador, historial, publicar y buscar solicitudes, completarlas, cancelarlas y reseñarlas, enviar, ver y aceptar propuestas, y los avisos por correo.
+- Todos los RF de la Entrega 1 (RF-01 a RF-13) están implementados.
 
 ## Flujo de trabajo
 
