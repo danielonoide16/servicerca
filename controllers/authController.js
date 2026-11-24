@@ -1,12 +1,8 @@
-const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const usuarios = require('../db/usuarioModel');
+const Usuario = require('../clases/Usuario');
 const tokens = require('../db/tokenModel');
 const { enviarCorreo } = require('../utils/correo');
 const log = require('../utils/log');
-
-// Se compara contra este hash cuando el correo no existe, para que ambos casos tarden parecido
-const HASH_FALSO = bcrypt.hashSync('contrasena-de-relleno', 10);
 
 const inicio = (req, res) => res.render('index', { titulo: 'Inicio' });
 const privacidad = (req, res) => res.render('privacidad', { titulo: 'Aviso de privacidad' });
@@ -47,9 +43,8 @@ async function loginVista(req, res) {
     });
   }
 
-  const fila = usuarios.buscarParaLogin(correo);
-  const coincide = await bcrypt.compare(contrasena, fila ? fila.contrasenaHash : HASH_FALSO);
-  if (!fila || !coincide) {
+  const usuario = await Usuario.buscarPorCredenciales(correo, contrasena);
+  if (!usuario) {
     log.aviso('Intento de inicio de sesión fallido desde ' + req.ip);
     return res.status(401).render('auth/login', {
       titulo: 'Iniciar sesión',
@@ -58,8 +53,8 @@ async function loginVista(req, res) {
     });
   }
 
-  await iniciarSesion(req, fila.id);
-  log.info('Inicio de sesión correcto, usuario ' + fila.id);
+  await iniciarSesion(req, usuario.id);
+  log.info('Inicio de sesión correcto, usuario ' + usuario.id);
   res.redirect('/');
 }
 
@@ -90,14 +85,13 @@ async function registroVista(req, res) {
     });
   }
 
-  if (usuarios.existeCorreo(correo)) {
+  if (Usuario.existeCorreo(correo)) {
     return res.status(409).render('auth/registro', {
       titulo: 'Registrarse', errores: ['Ya existe una cuenta con ese correo'], valores: { nombre, correo, rol },
     });
   }
 
-  const hash = await bcrypt.hash(contrasena, 10);
-  const usuario = usuarios.crear({ nombre, correo, contrasenaHash: hash, rol });
+  const usuario = await Usuario.registrar(nombre, correo, contrasena, rol);
   log.info('Usuario registrado: ' + usuario.id + ' (' + usuario.rol + ')');
 
   // enlace de verificación del correo
