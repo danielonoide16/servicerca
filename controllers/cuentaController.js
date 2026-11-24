@@ -1,8 +1,7 @@
-const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const db = require('../db/db');
 const log = require('../utils/log');
-const usuarios = require('../db/usuarioModel');
+const Usuario = require('../clases/Usuario');
 const tokens = require('../db/tokenModel');
 const { enviarCorreo } = require('../utils/correo');
 
@@ -34,7 +33,7 @@ function verificarVista(req, res) {
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
   const usuarioId = db.transaction(() => {
     const id = tokens.marcarUsado(tokenHash, 'verify-email', new Date().toISOString());
-    if (id) usuarios.marcarVerificado(id);
+    if (id) Usuario.buscarPorId(id).marcarCorreoVerificado();
     return id;
   })();
 
@@ -79,7 +78,7 @@ function olvideVista(req, res) {
     });
   }
 
-  const r = usuarios.buscarPorCorreo(correo);
+  const r = Usuario.buscarPorCorreo(correo);
   if (r) {
     const t = crypto.randomBytes(32).toString('hex');
     const h = crypto.createHash('sha256').update(t).digest('hex');
@@ -128,11 +127,11 @@ async function restablecerVista(req, res) {
     if (contrasena !== confirmacion) errores.push('Las contraseñas no coinciden');
 
     if (errores.length === 0) {
-      const hash = await bcrypt.hash(contrasena, 10);
+      const hash = await Usuario.cifrarContrasena(contrasena);
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
       const usuarioId = db.transaction(() => {
         const id = tokens.marcarUsado(tokenHash, 'reset-password', new Date().toISOString());
-        if (id) usuarios.actualizarContrasena(id, hash);
+        if (id) Usuario.buscarPorId(id).actualizarContrasena(hash);
         return id;
       })();
 
