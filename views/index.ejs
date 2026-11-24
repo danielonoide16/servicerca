@@ -1,15 +1,50 @@
 <%- include('partials/header', { titulo: 'Inicio' }) %>
-<section class="tarjeta">
-  <h1>ServiCerca</h1>
-  <p>Encuentra a quien necesitas para plomería, electricidad, carpintería y más, o ofrece tus servicios a clientes de tu zona.</p>
-
-  <% if (locals.usuario) { %>
-    <p>Hola, <strong><%= usuario.nombre %></strong>. Entraste como <%= usuario.rol %>.</p>
-  <% } else { %>
-    <p>
+<% if (locals.usuario) { %>
+  <section class="portada">
+    <h1>Hola, <%= usuario.nombre %></h1>
+    <% if (usuario.rol === 'cliente') { %>
+      <p>Publica lo que necesitas arreglar y revisa las propuestas que te mandan los prestadores de tu zona.</p>
+      <div class="botones">
+        <a class="boton" href="/solicitudes/nueva">Publicar una solicitud</a>
+        <a class="boton secundario" href="/solicitudes/mias">Ver mis solicitudes</a>
+      </div>
+    <% } else if (usuario.rol === 'prestador') { %>
+      <p>Busca solicitudes de tu oficio en tu zona y manda tu propuesta con precio y disponibilidad.</p>
+      <div class="botones">
+        <a class="boton" href="/solicitudes">Buscar solicitudes</a>
+        <a class="boton secundario" href="/perfil">Editar mi perfil</a>
+      </div>
+    <% } else { %>
+      <p>Entraste como <%= usuario.rol %>.</p>
+    <% } %>
+  </section>
+<% } else { %>
+  <section class="portada">
+    <h1>Arreglos en casa con gente de tu zona</h1>
+    <p>Publica lo que necesitas, sea plomería, electricidad, carpintería o lo que haga falta, y recibe propuestas de prestadores independientes cerca de ti.</p>
+    <div class="botones">
       <a class="boton" href="/registro">Crear cuenta</a>
-      <a class="boton secundario" href="/login">Iniciar sesión</a>
-    </p>
-  <% } %>
-</section>
+      <a class="boton secundario" href="/login">Ya tengo cuenta</a>
+    </div>
+  </section>
+
+  <ol class="pasos">
+    <li>
+      <h2>Publica tu solicitud</h2>
+      <p>Di qué oficio necesitas, en qué zona estás y qué hay que hacer.</p>
+    </li>
+    <li>
+      <h2>Compara propuestas</h2>
+      <p>Los prestadores te mandan su precio, cuándo pueden ir y un mensaje.</p>
+    </li>
+    <li>
+      <h2>Acepta y califica</h2>
+      <p>Elige la que más te convenga y, al terminar, deja una reseña.</p>
+    </li>
+  </ol>
+
+  <div class="prestadores">
+    <p>¿Tienes un oficio? <a href="/registro">Regístrate como prestador</a>, arma tu perfil y empieza a mandar propuestas a clientes de tu zona.</p>
+  </div>
+<% } %>
 <%- include('partials/footer') %>

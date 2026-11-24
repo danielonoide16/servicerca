@@ -48,7 +48,7 @@
                 <% if (solicitud.estado === 'Publicada' && p.puedeAceptarse()) { %>
                   <form action="/propuestas/<%= p.id %>/aceptar" method="post" class="en-linea"
                         onsubmit="return confirm('¿Aceptar esta propuesta? Las demás quedarán rechazadas.');">
-                    <button type="submit" class="enlace">Aceptar</button>
+                    <button type="submit" class="pequeno">Aceptar</button>
                   </form>
                 <% } %>
               </td>

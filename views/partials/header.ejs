@@ -1,10 +1,17 @@
 <% const usuarioActual = locals.usuario || null; -%>
+<%
+  // marca el enlace de la página actual en el menú
+  const ruta = locals.ruta || '';
+  const actual = (activo) => (activo ? 'aria-current="page"' : '');
+  const enBusqueda = ruta === '/solicitudes' || /^\/solicitudes\/\d+/.test(ruta);
+-%>
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><%= locals.titulo ? titulo + ' · ServiCerca' : 'ServiCerca' %></title>
+  <link rel="preload" href="/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
@@ -12,24 +19,26 @@
     <a class="marca" href="/">ServiCerca</a>
     <nav>
       <% if (usuarioActual && usuarioActual.rol === 'cliente') { %>
-        <a href="/solicitudes/mias">Mis solicitudes</a>
-        <a href="/solicitudes/nueva">Nueva solicitud</a>
+        <a href="/solicitudes/mias" <%- actual(ruta.startsWith('/solicitudes/mias')) %>>Mis solicitudes</a>
+        <a href="/solicitudes/nueva" <%- actual(ruta.startsWith('/solicitudes/nueva')) %>>Nueva solicitud</a>
       <% } else if (usuarioActual && usuarioActual.rol === 'prestador') { %>
-        <a href="/solicitudes">Buscar solicitudes</a>
-        <a href="/propuestas">Mis propuestas</a>
-        <a href="/perfil">Mi perfil</a>
+        <a href="/solicitudes" <%- actual(enBusqueda) %>>Buscar solicitudes</a>
+        <a href="/propuestas" <%- actual(ruta.startsWith('/propuestas')) %>>Mis propuestas</a>
+        <a href="/perfil" <%- actual(ruta.startsWith('/perfil')) %>>Mi perfil</a>
       <% } %>
       <% if (usuarioActual && (usuarioActual.rol === 'cliente' || usuarioActual.rol === 'prestador')) { %>
-        <a href="/historial">Historial</a>
+        <a href="/historial" <%- actual(ruta.startsWith('/historial')) %>>Historial</a>
       <% } %>
       <% if (usuarioActual) { %>
-        <span class="usuario"><%= usuarioActual.nombre %></span>
-        <form action="/logout" method="post" class="en-linea">
-          <button type="submit" class="enlace">Cerrar sesión</button>
-        </form>
+        <div class="cuenta">
+          <span class="usuario"><%= usuarioActual.nombre %></span>
+          <form action="/logout" method="post" class="en-linea">
+            <button type="submit">Cerrar sesión</button>
+          </form>
+        </div>
       <% } else { %>
-        <a href="/login">Iniciar sesión</a>
-        <a href="/registro">Registrarse</a>
+        <a href="/login" <%- actual(ruta === '/login') %>>Iniciar sesión</a>
+        <a class="boton" href="/registro">Crear cuenta</a>
       <% } %>
     </nav>
   </header>
