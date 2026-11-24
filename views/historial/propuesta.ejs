@@ -9,12 +9,20 @@
   <% if (propuesta.mensaje) { %>
     <p><strong>Mensaje:</strong> <%= propuesta.mensaje %></p>
   <% } %>
-  <p><strong>Enviada el:</strong> <%= propuesta.fecha_envio.slice(0, 10) %></p>
+  <p><strong>Enviada el:</strong> <%= propuesta.fecha %></p>
 
   <h2>La solicitud</h2>
   <p><strong>Descripción:</strong> <%= propuesta.descripcion %></p>
   <p><strong>Zona:</strong> <%= propuesta.zona %></p>
   <p><strong>Estado de la solicitud:</strong> <span class="estado estado-<%= propuesta.estado_solicitud %>"><%= propuesta.estado_solicitud %></span></p>
+
+  <% if (propuesta.calificacion) { %>
+    <h2>Calificación del cliente</h2>
+    <p><strong>Calificación:</strong> <%= propuesta.calificacion %> de 5</p>
+    <% if (propuesta.resena_comentario) { %>
+      <p><strong>Comentario:</strong> <%= propuesta.resena_comentario %></p>
+    <% } %>
+  <% } %>
 
   <p><a href="/historial">Volver a mi historial</a></p>
 </section>

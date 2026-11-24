@@ -35,6 +35,7 @@ class PerfilPrestador {
   // Valida y guarda el perfil. Regresa la lista de errores (vacía si se guardó)
   actualizarPerfil(descripcion, zonaServicio, oficioIds) {
     const errores = [];
+    if (oficioIds) oficioIds = [...new Set(oficioIds)]; // un oficio repetido en la petición se cuenta una sola vez
 
     if (!zonaServicio || zonaServicio.trim() === '') {
       errores.push('La zona de servicio es obligatoria');

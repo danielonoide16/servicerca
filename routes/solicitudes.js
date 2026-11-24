@@ -43,9 +43,10 @@ router.get('/nueva', requireRole('cliente'), requireVerifiedEmail, (req, res) =>
 
 // RF-04: publicar la solicitud
 router.post('/', requireRole('cliente'), requireVerifiedEmail, (req, res) => {
-  const oficioId = Number(texto(req.body.oficio)) || null;
-  const descripcion = texto(req.body.descripcion);
-  const zona = texto(req.body.zona);
+  const body = req.body || {};
+  const oficioId = Number(texto(body.oficio)) || null;
+  const descripcion = texto(body.descripcion);
+  const zona = texto(body.zona);
 
   const { errores } = SolicitudTrabajo.publicar(req.user.id, oficioId, descripcion, zona);
   if (errores.length > 0) {
@@ -77,15 +78,18 @@ router.get('/mias', requireRole('cliente'), (req, res) => {
   });
 });
 
-// Detalle de una solicitud. La ve su cliente, y los prestadores mientras está publicada.
+// Detalle de una solicitud (RF-07 para el cliente dueño)
 router.get('/:id', requireAuth, (req, res) => {
   const solicitud = cargarSolicitud(req, res);
   if (!solicitud) return;
 
+  // La ve su cliente. Un prestador la ve mientras está publicada o si ya le mandó una propuesta
+  // (así el prestador aceptado sigue viendo su trabajo). Para cualquier otro usuario no existe (404).
   const esDueno = solicitud.clienteId === req.user.id;
-  const prestadorPuedeVer = req.user.rol === 'prestador' && solicitud.estado === 'Publicada';
+  const esPrestador = req.user.rol === 'prestador';
+  const prestadorPuedeVer = esPrestador && (solicitud.estado === 'Publicada' || Propuesta.yaEnvio(solicitud.id, req.user.id));
   if (!esDueno && !prestadorPuedeVer) {
-    return res.status(403).render('error', { status: 403, message: 'No tienes permiso para ver esta solicitud' });
+    return res.status(404).render('error', { status: 404, message: 'No encontramos esa solicitud' });
   }
 
   res.render('solicitudes/detalle', {
@@ -95,7 +99,7 @@ router.get('/:id', requireAuth, (req, res) => {
     resena: Resena.buscarPorSolicitud(solicitud.id),
     // rf-07: solo el cliente dueño ve las propuestas que recibió
     propuestas: esDueno ? Propuesta.deSolicitud(solicitud.id) : [],
-    yaPropuso: req.user.rol === 'prestador' && Propuesta.yaEnvio(solicitud.id, req.user.id),
+    yaPropuso: esPrestador && Propuesta.yaEnvio(solicitud.id, req.user.id),
     aviso: texto(req.query.enviada) === '1' ? 'Tu propuesta se envió. El cliente la verá en su solicitud.'
       : texto(req.query.aceptada) === '1' ? 'Aceptaste la propuesta. La solicitud quedó asignada a ese prestador.'
         : null,
@@ -103,14 +107,16 @@ router.get('/:id', requireAuth, (req, res) => {
 });
 
 // RF-09: marcar como completada
-router.post('/:id/completar', requireRole('cliente'), (req, res) => {
+router.post('/:id/completar', requireRole('cliente'), async (req, res) => {
   const solicitud = cargarSolicitud(req, res);
   if (!solicitud) return;
 
-  const error = solicitud.completar(req.user.id);
+  if (solicitud.clienteId !== req.user.id) {
+    return res.status(404).render('error', { status: 404, message: 'No encontramos esa solicitud' });
+  }
+  const error = await solicitud.completar(req.user.id);
   if (error) {
-    const status = solicitud.clienteId !== req.user.id ? 403 : 409;
-    return res.status(status).render('error', { status, message: error });
+    return res.status(409).render('error', { status: 409, message: error });
   }
   res.redirect('/solicitudes/mias?completada=1');
 });
@@ -120,10 +126,12 @@ router.post('/:id/cancelar', requireRole('cliente'), (req, res) => {
   const solicitud = cargarSolicitud(req, res);
   if (!solicitud) return;
 
+  if (solicitud.clienteId !== req.user.id) {
+    return res.status(404).render('error', { status: 404, message: 'No encontramos esa solicitud' });
+  }
   const error = solicitud.cancelar(req.user.id);
   if (error) {
-    const status = solicitud.clienteId !== req.user.id ? 403 : 409;
-    return res.status(status).render('error', { status, message: error });
+    return res.status(409).render('error', { status: 409, message: error });
   }
   res.redirect('/solicitudes/mias?cancelada=1');
 });

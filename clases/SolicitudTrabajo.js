@@ -1,4 +1,8 @@
 const db = require('../db/db');
+const { enviarAviso, APP_URL } = require('../utils/correo');
+const { fechaCorta } = require('../utils/fechas');
+const Usuario = require('./Usuario');
+const Notificacion = require('./Notificacion');
 
 // Trabajo que publica un cliente para que los prestadores le manden propuestas.
 // RF-04 publicar, RF-05 buscar, RF-09 completar y RF-10 cancelar.
@@ -109,7 +113,7 @@ class SolicitudTrabajo {
 
   // RF-09: el cliente marca como completada una solicitud asignada.
   // Regresa el mensaje de error, o null si se completó.
-  completar(usuarioId) {
+  async completar(usuarioId) {
     if (this.clienteId !== usuarioId) {
       return 'No tienes permiso para modificar esta solicitud';
     }
@@ -119,6 +123,26 @@ class SolicitudTrabajo {
 
     db.prepare("UPDATE solicitudes SET estado = 'Completada' WHERE id = ?").run(this.id);
     this.estado = 'Completada';
+
+    // RF-13: avisarle al prestador cuya propuesta se aceptó que el trabajo quedó completado
+    const propuesta = db
+      .prepare("SELECT id, prestador_id FROM propuestas WHERE solicitud_id = ? AND estado = 'Aceptada'")
+      .get(this.id);
+    if (propuesta) {
+      const prestador = Usuario.buscarPorId(propuesta.prestador_id);
+      const asunto = 'El cliente marcó como completado tu trabajo de ' + this.oficio;
+      const enviado = await enviarAviso(prestador.correo, asunto, {
+        nombre: prestador.nombre,
+        parrafos: [
+          `El cliente marcó como completado el trabajo "${this.descripcion}".`,
+          'Ahora el cliente puede dejarte una reseña.',
+        ],
+        enlace: `${APP_URL()}/historial/propuestas/${propuesta.id}`,
+        textoBoton: 'Ver mi propuesta',
+        nota: 'Gracias por trabajar con ServiCerca.',
+      }, 'trabajo-completado');
+      Notificacion.registrar(propuesta.id, prestador.correo, asunto, enviado ? 'Enviado' : 'Fallido');
+    }
     return null;
   }
 
@@ -157,7 +181,7 @@ class SolicitudTrabajo {
   }
 
   fechaCorta() {
-    return this.fechaPublicacion.slice(0, 10);
+    return fechaCorta(this.fechaPublicacion);
   }
 }
 

@@ -42,16 +42,17 @@ router.post('/nueva/:solicitudId', requireRole('prestador'), requireVerifiedEmai
     return res.status(404).render('error', { status: 404, message: 'No encontramos esa solicitud' });
   }
 
-  const precio = Number(texto(req.body.precio));
-  const disponibilidad = texto(req.body.disponibilidad);
-  const mensaje = texto(req.body.mensaje);
+  const body = req.body || {};
+  const precio = Number(texto(body.precio));
+  const disponibilidad = texto(body.disponibilidad);
+  const mensaje = texto(body.mensaje);
 
   const { errores } = await Propuesta.enviar(solicitud, req.user.id, precio, disponibilidad, mensaje);
   if (errores.length > 0) {
     return res.status(400).render('propuestas/nueva', {
       titulo: 'Enviar propuesta',
       solicitud,
-      valores: { precio: texto(req.body.precio), disponibilidad, mensaje },
+      valores: { precio: texto(body.precio), disponibilidad, mensaje },
       errores,
     });
   }
@@ -66,11 +67,13 @@ router.post('/:id/aceptar', requireRole('cliente'), async (req, res) => {
     return res.status(404).render('error', { status: 404, message: 'No encontramos esa propuesta' });
   }
 
+  const solicitud = SolicitudTrabajo.buscarPorId(propuesta.solicitudId);
+  if (solicitud.clienteId !== req.user.id) {
+    return res.status(404).render('error', { status: 404, message: 'No encontramos esa propuesta' });
+  }
   const error = await propuesta.aceptar(req.user.id);
   if (error) {
-    const solicitud = SolicitudTrabajo.buscarPorId(propuesta.solicitudId);
-    const status = solicitud.clienteId !== req.user.id ? 403 : 409;
-    return res.status(status).render('error', { status, message: error });
+    return res.status(409).render('error', { status: 409, message: error });
   }
   res.redirect('/solicitudes/' + propuesta.solicitudId + '?aceptada=1');
 });

@@ -39,11 +39,12 @@ Para correrlo sin recarga automática usar `npm start`.
 | `NODE_ENV` | `development` (por defecto) o `production`. En producción las cookies son `secure`. |
 | `SESSION_SECRET` | Texto largo y propio para firmar las sesiones. Obligatorio: si falta, el servidor no arranca. |
 | `DATABASE_PATH` | Ruta del archivo SQLite, relativa a la raíz del proyecto o absoluta. Por defecto `db/servicerca.db`. |
+| `ZONA_HORARIA` | Zona horaria con la que se muestran las fechas (la base las guarda en UTC). Por defecto `America/Mexico_City`. |
 | `APP_URL` | URL pública de la aplicación. Se usa para armar los enlaces de los correos. Por defecto `http://localhost:3000`. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` | Servidor SMTP para enviar correos (`SMTP_SECURE=true` solo con el puerto 465). Ver [Correos](#correos). |
 | `MAIL_FROM` | Remitente de los correos. |
 
-Si el servidor SMTP no está configurado, el sistema funciona igual: los correos no salen, el aviso queda en la consola y las peticiones responden normalmente.
+Si el servidor SMTP no está configurado, el sistema funciona igual: los correos no salen, el aviso queda en la consola (en desarrollo, con el enlace de verificación o de restablecer) y las peticiones responden normalmente.
 
 ### Scripts
 
@@ -161,7 +162,7 @@ servicerca/
 ├── routes/              # Rutas de las vistas (auth, cuenta, perfil, historial, solicitudes, propuestas, resenas)
 ├── controllers/         # Reciben la petición, validan los datos y renderizan la vista
 ├── middleware/          # cargarUsuario, requireAuth (requireRole, requireVerifiedEmail) y errorHandler
-├── utils/               # correo.js (envío de correos con nodemailer) y log.js (mensajes de consola)
+├── utils/               # correo.js (envío de correos con nodemailer), fechas.js (fechas en tu zona horaria) y log.js (mensajes de consola)
 ├── scripts/             # ethereal.js: crea una cuenta de prueba de correo
 ├── views/               # Plantillas EJS (auth, perfil, solicitudes, resenas, historial, partials)
 └── public/css/          # Estilos
@@ -205,7 +206,7 @@ La verificación del correo y la recuperación de contraseña usan el mismo meca
 
 ## Correos
 
-El envío pasa por `utils/correo.js`, que arma el correo (HTML y texto) y lo manda con nodemailer. Si el correo falla, la petición no se rompe: el aviso queda en la consola y la respuesta es la misma (por ejemplo, el registro crea la cuenta aunque el correo no salga; el usuario puede pedir que se lo reenvíen). Los enlaces se arman con `APP_URL`.
+El envío pasa por `utils/correo.js`: todos los correos (verificación, restablecer contraseña y avisos de propuestas) usan la misma plantilla HTML con versión en texto y se mandan con nodemailer. Si el correo falla, la petición no se rompe: el aviso queda en la consola y la respuesta es la misma (por ejemplo, el registro crea la cuenta aunque el correo no salga; el usuario puede pedir que se lo reenvíen). Los enlaces se arman con `APP_URL`.
 
 ### Cómo ver los correos en desarrollo (Ethereal)
 
@@ -224,6 +225,9 @@ Puedes usar cualquier otro servidor SMTP llenando las mismas variables.
 |---|---|---|
 | Verificación de correo | Registrarse, o pedir otro con "Reenviar enlace" | A la persona que se registró |
 | Restablecer contraseña | "¿Olvidaste tu contraseña?" (solo si el correo tiene cuenta) | A la dueña de la cuenta |
+| Propuesta recibida | Un prestador envía una propuesta | Al cliente dueño de la solicitud |
+| Propuesta aceptada | El cliente acepta una propuesta | Al prestador de esa propuesta |
+| Trabajo completado | El cliente marca la solicitud como completada | Al prestador de la propuesta aceptada |
 
 ### Verificación del correo y recuperación de contraseña
 
@@ -234,7 +238,7 @@ Puedes usar cualquier otro servidor SMTP llenando las mismas variables.
 
 ## Mensajes en consola
 
-El servidor escribe en la consola el arranque, los registros, los inicios de sesión y los errores. Nunca se escriben contraseñas, tokens ni enlaces. Los errores inesperados muestran al usuario una página con un mensaje genérico; el detalle técnico solo sale en la consola.
+El servidor escribe en la consola el arranque, los registros, los inicios de sesión y los errores. Nunca se escriben contraseñas ni tokens. Única excepción: en desarrollo (`NODE_ENV` distinto de `production`) y sin `SMTP_HOST`, el enlace de verificación o de restablecer queda en la consola para poder probar sin servidor de correo. Los errores inesperados muestran al usuario una página con un mensaje genérico; el detalle técnico solo sale en la consola.
 
 ## Solicitudes y reseñas
 
@@ -245,8 +249,8 @@ La lógica vive en las clases `SolicitudTrabajo` y `Resena` (carpeta `clases/`);
 | GET / POST | `/solicitudes/nueva`, `/solicitudes` | Cliente con correo verificado | RF-04: publicar una solicitud (`oficio`, `descripcion` de 10 a 500 caracteres, `zona` de hasta 100). Responde 400 si hay datos inválidos |
 | GET | `/solicitudes?oficio=&zona=` | Prestador | RF-05: buscar solicitudes publicadas. Los dos filtros son opcionales; la zona busca por coincidencia parcial sin distinguir mayúsculas. Máximo 50 resultados |
 | GET | `/solicitudes/mias` | Cliente | Sus solicitudes con las acciones que permite cada estado |
-| GET | `/solicitudes/:id` | Su cliente, o un prestador si está publicada | Detalle de la solicitud |
-| POST | `/solicitudes/:id/completar` | Cliente dueño | RF-09: `Asignada → Completada`. 403 si no es suya, 409 si el estado no lo permite |
+| GET | `/solicitudes/:id` | Su cliente, o un prestador si está publicada o si ya le mandó una propuesta | Detalle de la solicitud. Para cualquier otro usuario responde 404 |
+| POST | `/solicitudes/:id/completar` | Cliente dueño | RF-09: `Asignada → Completada`. 404 si no es suya, 409 si el estado no lo permite |
 | POST | `/solicitudes/:id/cancelar` | Cliente dueño | RF-10: `Publicada` o `Asignada → Cancelada`. Las propuestas que seguían `Enviada` quedan `Rechazada` |
 | GET / POST | `/resenas/nueva/:solicitudId` | Cliente dueño | RF-11: calificación de 1 a 5 y comentario opcional (hasta 500 caracteres). Solo con la solicitud `Completada` y una vez por solicitud |
 
@@ -258,10 +262,12 @@ La lógica vive en las clases `Propuesta` y `Notificacion` (carpeta `clases/`).
 |---|---|---|---|
 | GET / POST | `/propuestas/nueva/:solicitudId` | Prestador con correo verificado | RF-06: enviar una propuesta (`precio` mayor a 0, `disponibilidad` de hasta 100 caracteres, `mensaje` opcional de hasta 500). Solo a solicitudes `Publicada` y una vez por solicitud |
 | GET | `/solicitudes/:id` | Cliente dueño | RF-07: el detalle muestra las propuestas recibidas. Nadie más ve esa lista |
-| POST | `/propuestas/:id/aceptar` | Cliente dueño | RF-08: la propuesta queda `Aceptada`, las demás `Rechazada` y la solicitud `Asignada`. 403 si la solicitud no es suya, 409 si ya tiene una propuesta aceptada |
+| POST | `/propuestas/:id/aceptar` | Cliente dueño | RF-08: la propuesta queda `Aceptada`, las demás `Rechazada` y la solicitud `Asignada`. 404 si la solicitud no es suya, 409 si ya tiene una propuesta aceptada |
 | GET | `/propuestas` | Prestador | Lleva al historial, que muestra sus propuestas (RF-12) |
 
-RF-13: al enviar una propuesta se le avisa por correo al cliente, y al aceptarla se le avisa al prestador. Cada aviso queda en la tabla `notificaciones` como `Enviado` o `Fallido`. Si el correo no está configurado o falla, la propuesta se guarda igual y el aviso queda como `Fallido`.
+RF-12: el historial del cliente muestra cada solicitud con su calificación (la reseña que dejó) y el del prestador muestra la calificación que le dio el cliente en sus propuestas aceptadas; su detalle incluye también el comentario. Sin reseña aparece «—».
+
+RF-13: al enviar una propuesta se le avisa por correo al cliente, al aceptarla se le avisa al prestador y, cuando el cliente marca la solicitud como completada, también se le avisa al prestador cuya propuesta se aceptó. Cada aviso queda en la tabla `notificaciones` como `Enviado` o `Fallido`. Si el correo no está configurado o falla, la propuesta se guarda igual y el aviso queda como `Fallido`.
 
 ## Estado actual
 

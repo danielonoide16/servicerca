@@ -42,15 +42,16 @@ router.post('/', requireAuth, (req, res) => {
     return res.status(403).render('error', { status: 403, message: 'Solo los prestadores tienen perfil' });
   }
 
-  const descripcion = typeof req.body.descripcion === 'string' ? req.body.descripcion : '';
-  const zonaServicio = typeof req.body.zona === 'string' ? req.body.zona : '';
+  const body = req.body || {};
+  const descripcion = typeof body.descripcion === 'string' ? body.descripcion : '';
+  const zonaServicio = typeof body.zona === 'string' ? body.zona : '';
 
   // las casillas llegan como texto si se marca una y como arreglo si se marcan varias
   let oficioIds = [];
-  if (Array.isArray(req.body.oficios)) {
-    oficioIds = req.body.oficios.map((o) => Number(o));
-  } else if (typeof req.body.oficios === 'string' && req.body.oficios !== '') {
-    oficioIds = [Number(req.body.oficios)];
+  if (Array.isArray(body.oficios)) {
+    oficioIds = body.oficios.map((o) => Number(o));
+  } else if (typeof body.oficios === 'string' && body.oficios !== '') {
+    oficioIds = [Number(body.oficios)];
   }
 
   const catalogo = PerfilPrestador.catalogoOficios();

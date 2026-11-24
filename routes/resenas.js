@@ -13,7 +13,7 @@ function cargarSolicitud(req, res) {
     return null;
   }
   if (solicitud.clienteId !== req.user.id) {
-    res.status(403).render('error', { status: 403, message: 'No tienes permiso para reseñar esta solicitud' });
+    res.status(404).render('error', { status: 404, message: 'No encontramos esa solicitud' });
     return null;
   }
   return solicitud;
@@ -44,8 +44,9 @@ router.post('/nueva/:solicitudId', requireRole('cliente'), (req, res) => {
   const solicitud = cargarSolicitud(req, res);
   if (!solicitud) return;
 
-  const calificacion = Number(typeof req.body.calificacion === 'string' ? req.body.calificacion : '');
-  const comentario = typeof req.body.comentario === 'string' ? req.body.comentario : '';
+  const body = req.body || {};
+  const calificacion = Number(typeof body.calificacion === 'string' ? body.calificacion : '');
+  const comentario = typeof body.comentario === 'string' ? body.comentario : '';
 
   const { errores } = Resena.registrar(solicitud, req.user.id, calificacion, comentario);
   if (errores.length > 0) {
