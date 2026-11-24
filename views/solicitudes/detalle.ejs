@@ -33,7 +33,7 @@
     <% } else { %>
       <table>
         <thead>
-          <tr><th>Prestador</th><th>Zona</th><th>Precio</th><th>Disponibilidad</th><th>Mensaje</th><th>Estado</th></tr>
+          <tr><th>Prestador</th><th>Zona</th><th>Precio</th><th>Disponibilidad</th><th>Mensaje</th><th>Estado</th><th></th></tr>
         </thead>
         <tbody>
           <% propuestas.forEach(function (p) { %>
@@ -44,6 +44,14 @@
               <td><%= p.disponibilidad %></td>
               <td><%= p.mensaje || '' %></td>
               <td><span class="estado estado-<%= p.estado %>"><%= p.estado %></span></td>
+              <td class="acciones">
+                <% if (solicitud.estado === 'Publicada' && p.puedeAceptarse()) { %>
+                  <form action="/propuestas/<%= p.id %>/aceptar" method="post" class="en-linea"
+                        onsubmit="return confirm('¿Aceptar esta propuesta? Las demás quedarán rechazadas.');">
+                    <button type="submit" class="enlace">Aceptar</button>
+                  </form>
+                <% } %>
+              </td>
             </tr>
           <% }) %>
         </tbody>

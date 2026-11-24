@@ -58,4 +58,21 @@ router.post('/nueva/:solicitudId', requireRole('prestador'), requireVerifiedEmai
   res.redirect('/solicitudes/' + solicitud.id + '?enviada=1');
 });
 
+// rf-08: el cliente acepta una propuesta y la solicitud queda asignada
+router.post('/:id/aceptar', requireRole('cliente'), async (req, res) => {
+  const id = Number(req.params.id);
+  const propuesta = Number.isInteger(id) && id > 0 ? Propuesta.buscarPorId(id) : null;
+  if (!propuesta) {
+    return res.status(404).render('error', { status: 404, message: 'No encontramos esa propuesta' });
+  }
+
+  const error = await propuesta.aceptar(req.user.id);
+  if (error) {
+    const solicitud = SolicitudTrabajo.buscarPorId(propuesta.solicitudId);
+    const status = solicitud.clienteId !== req.user.id ? 403 : 409;
+    return res.status(status).render('error', { status, message: error });
+  }
+  res.redirect('/solicitudes/' + propuesta.solicitudId + '?aceptada=1');
+});
+
 module.exports = router;
