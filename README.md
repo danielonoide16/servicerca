@@ -157,13 +157,13 @@ servicerca/
 │   ├── seed.js          # Datos de prueba (npm run seed)
 │   ├── tipos.js         # Constantes: roles, estados y propósitos de los tokens
 │   └── tokenModel.js    # Consultas SQL de los tokens de un solo uso
-├── clases/              # Clases del dominio (Usuario, PerfilPrestador, ...)
+├── clases/              # Clases del dominio (PerfilPrestador, SolicitudTrabajo, Resena)
 ├── routes/              # Rutas de las vistas (auth, cuenta, perfil, historial, solicitudes, propuestas, resenas)
 ├── controllers/         # Reciben la petición, validan los datos y renderizan la vista
 ├── middleware/          # cargarUsuario, requireAuth (requireRole, requireVerifiedEmail) y errorHandler
 ├── utils/               # correo.js (envío de correos con nodemailer) y log.js (mensajes de consola)
 ├── scripts/             # ethereal.js: crea una cuenta de prueba de correo
-├── views/               # Plantillas EJS (auth, perfil, solicitudes, partials)
+├── views/               # Plantillas EJS (auth, perfil, solicitudes, resenas, historial, partials)
 └── public/css/          # Estilos
 ```
 
@@ -236,10 +236,24 @@ Puedes usar cualquier otro servidor SMTP llenando las mismas variables.
 
 El servidor escribe en la consola el arranque, los registros, los inicios de sesión y los errores. Nunca se escriben contraseñas, tokens ni enlaces. Los errores inesperados muestran al usuario una página con un mensaje genérico; el detalle técnico solo sale en la consola.
 
+## Solicitudes y reseñas
+
+La lógica vive en las clases `SolicitudTrabajo` y `Resena` (carpeta `clases/`); las rutas solo leen el formulario, llaman a la clase y muestran la vista.
+
+| Método | Ruta | Quién | Descripción |
+|---|---|---|---|
+| GET / POST | `/solicitudes/nueva`, `/solicitudes` | Cliente con correo verificado | RF-04: publicar una solicitud (`oficio`, `descripcion` de 10 a 500 caracteres, `zona` de hasta 100). Responde 400 si hay datos inválidos |
+| GET | `/solicitudes?oficio=&zona=` | Prestador | RF-05: buscar solicitudes publicadas. Los dos filtros son opcionales; la zona busca por coincidencia parcial sin distinguir mayúsculas. Máximo 50 resultados |
+| GET | `/solicitudes/mias` | Cliente | Sus solicitudes con las acciones que permite cada estado |
+| GET | `/solicitudes/:id` | Su cliente, o un prestador si está publicada | Detalle de la solicitud |
+| POST | `/solicitudes/:id/completar` | Cliente dueño | RF-09: `Asignada → Completada`. 403 si no es suya, 409 si el estado no lo permite |
+| POST | `/solicitudes/:id/cancelar` | Cliente dueño | RF-10: `Publicada` o `Asignada → Cancelada`. Las propuestas que seguían `Enviada` quedan `Rechazada` |
+| GET / POST | `/resenas/nueva/:solicitudId` | Cliente dueño | RF-11: calificación de 1 a 5 y comentario opcional (hasta 500 caracteres). Solo con la solicitud `Completada` y una vez por solicitud |
+
 ## Estado actual
 
-- Listo: modelo relacional, conexión a la base de datos, migraciones, seed, estructura base del servidor, manejo de errores, cuentas (registro, login, logout, roles), verificación de correo y recuperación de contraseña por correo.
-- Pendiente: perfil, solicitudes, propuestas, reseñas y el envío de correos de aviso.
+- Listo: modelo relacional, conexión a la base de datos, migraciones, seed, estructura base del servidor, manejo de errores, cuentas (registro, login, logout, roles), verificación de correo y recuperación de contraseña por correo, perfil del prestador, historial, publicar y buscar solicitudes, completarlas, cancelarlas y reseñarlas.
+- Pendiente: propuestas (enviar, ver y aceptar) y el envío de correos de aviso.
 
 ## Flujo de trabajo
 

@@ -1,0 +1,47 @@
+<%- include('../partials/header', { titulo: 'Buscar solicitudes' }) %>
+<section class="tarjeta">
+  <h1>Buscar solicitudes</h1>
+  <form action="/solicitudes" method="get" class="filtros">
+    <div>
+      <label for="oficio">Oficio</label>
+      <select id="oficio" name="oficio">
+        <option value="">Todos</option>
+        <% catalogo.forEach(function (oficio) { %>
+          <option value="<%= oficio.id %>" <%= filtros.oficioId === oficio.id ? 'selected' : '' %>><%= oficio.nombre %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div>
+      <label for="zona">Zona</label>
+      <input type="text" id="zona" name="zona" value="<%= filtros.zona %>" maxlength="100" placeholder="Por ejemplo: Centro">
+    </div>
+    <div>
+      <button type="submit">Buscar</button>
+      <a class="boton secundario" href="/solicitudes">Limpiar</a>
+    </div>
+  </form>
+</section>
+
+<section class="tarjeta">
+  <% if (solicitudes.length === 0) { %>
+    <p>No hay solicitudes publicadas con esos filtros.</p>
+  <% } else { %>
+    <table>
+      <thead>
+        <tr><th>Fecha</th><th>Oficio</th><th>Descripción</th><th>Zona</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% solicitudes.forEach(function (s) { %>
+          <tr>
+            <td><%= s.fechaCorta() %></td>
+            <td><%= s.oficio %></td>
+            <td><%= s.descripcion %></td>
+            <td><%= s.zona %></td>
+            <td><a href="/solicitudes/<%= s.id %>">Ver</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+<%- include('../partials/footer') %>
