@@ -2,6 +2,7 @@ const express = require('express');
 const { requireAuth, requireRole, requireVerifiedEmail } = require('../middleware/requireAuth');
 const SolicitudTrabajo = require('../clases/SolicitudTrabajo');
 const Resena = require('../clases/Resena');
+const Propuesta = require('../clases/Propuesta');
 
 const router = express.Router();
 
@@ -92,6 +93,8 @@ router.get('/:id', requireAuth, (req, res) => {
     solicitud,
     esDueno,
     resena: Resena.buscarPorSolicitud(solicitud.id),
+    yaPropuso: req.user.rol === 'prestador' && Propuesta.yaEnvio(solicitud.id, req.user.id),
+    aviso: texto(req.query.enviada) === '1' ? 'Tu propuesta se envió. El cliente la verá en su solicitud.' : null,
   });
 });
 

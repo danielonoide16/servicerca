@@ -1,6 +1,9 @@
 <%- include('../partials/header', { titulo: 'Solicitud de ' + solicitud.oficio }) %>
 <section class="tarjeta">
   <h1>Solicitud de <%= solicitud.oficio %></h1>
+  <% if (aviso) { %>
+    <p class="mensaje"><%= aviso %></p>
+  <% } %>
   <p><span class="estado estado-<%= solicitud.estado %>"><%= solicitud.estado %></span></p>
   <p><strong>Descripción:</strong> <%= solicitud.descripcion %></p>
   <p><strong>Zona:</strong> <%= solicitud.zona %></p>
@@ -34,6 +37,13 @@
 
     <p><a href="/solicitudes/mias">Volver a mis solicitudes</a></p>
   <% } else { %>
+    <% if (solicitud.estado === 'Publicada') { %>
+      <% if (yaPropuso) { %>
+        <p>Ya enviaste una propuesta a esta solicitud. Puedes ver su estado en tu <a href="/historial">historial</a>.</p>
+      <% } else { %>
+        <p><a class="boton" href="/propuestas/nueva/<%= solicitud.id %>">Enviar propuesta</a></p>
+      <% } %>
+    <% } %>
     <p><a href="/solicitudes">Volver a la búsqueda</a></p>
   <% } %>
 </section>
