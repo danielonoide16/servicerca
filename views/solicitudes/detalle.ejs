@@ -27,6 +27,29 @@
       <% } %>
     </div>
 
+    <h2>Propuestas recibidas</h2>
+    <% if (propuestas.length === 0) { %>
+      <p>Todavía no has recibido propuestas.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr><th>Prestador</th><th>Zona</th><th>Precio</th><th>Disponibilidad</th><th>Mensaje</th><th>Estado</th></tr>
+        </thead>
+        <tbody>
+          <% propuestas.forEach(function (p) { %>
+            <tr>
+              <td><%= p.prestadorNombre %></td>
+              <td><%= p.prestadorZona || '—' %></td>
+              <td>$<%= p.precio %></td>
+              <td><%= p.disponibilidad %></td>
+              <td><%= p.mensaje || '' %></td>
+              <td><span class="estado estado-<%= p.estado %>"><%= p.estado %></span></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+
     <% if (resena) { %>
       <h2>Tu reseña</h2>
       <p><strong>Calificación:</strong> <%= resena.calificacion %> de 5</p>

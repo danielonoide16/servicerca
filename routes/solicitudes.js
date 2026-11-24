@@ -93,6 +93,8 @@ router.get('/:id', requireAuth, (req, res) => {
     solicitud,
     esDueno,
     resena: Resena.buscarPorSolicitud(solicitud.id),
+    // rf-07: solo el cliente dueño ve las propuestas que recibió
+    propuestas: esDueno ? Propuesta.deSolicitud(solicitud.id) : [],
     yaPropuso: req.user.rol === 'prestador' && Propuesta.yaEnvio(solicitud.id, req.user.id),
     aviso: texto(req.query.enviada) === '1' ? 'Tu propuesta se envió. El cliente la verá en su solicitud.' : null,
   });
