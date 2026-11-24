@@ -1,4 +1,8 @@
+const nodemailer = require('nodemailer');
 const db = require('../db/db');
+const log = require('../utils/log');
+const Usuario = require('./Usuario');
+const Notificacion = require('./Notificacion');
 
 // propuesta que un prestador le manda a una solicitud publicada (rf-06, rf-07, rf-08)
 class Propuesta {
@@ -83,6 +87,35 @@ class Propuesta {
       .run(solicitud.id, prestadorId, precio, disponibilidad.trim(), texto);
     const propuesta = Propuesta.buscarPorId(Number(resultado.lastInsertRowid));
 
+    // rf-13: avisarle al cliente que llegó una propuesta
+    const cliente = Usuario.buscarPorId(solicitud.clienteId);
+    const asunto = 'Recibiste una propuesta para tu solicitud de ' + solicitud.oficio;
+    let estadoEnvio = 'Fallido';
+    try {
+      if (!process.env.SMTP_HOST) throw new Error('falta SMTP_HOST en el .env');
+      const transporte = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+        connectionTimeout: 10000,
+        socketTimeout: 15000,
+      });
+      await transporte.sendMail({
+        from: process.env.MAIL_FROM || 'ServiCerca <no-reply@servicerca.local>',
+        to: cliente.correo,
+        subject: asunto,
+        text: `Hola, ${cliente.nombre}:\n\n`
+          + `Un prestador te mandó una propuesta de $${precio} para tu solicitud "${solicitud.descripcion}".\n`
+          + `Disponibilidad: ${disponibilidad.trim()}\n\n`
+          + `Entra a ServiCerca para verla y aceptarla: ${process.env.APP_URL || 'http://localhost:3000'}/solicitudes/${solicitud.id}\n`,
+      });
+      estadoEnvio = 'Enviado';
+    } catch (err) {
+      log.aviso('No se pudo enviar el aviso de propuesta recibida: ' + err.message);
+    }
+    Notificacion.registrar(propuesta.id, cliente.correo, asunto, estadoEnvio);
+
     return { errores: [], propuesta };
   }
 
@@ -109,6 +142,34 @@ class Propuesta {
     });
     aceptarTodo();
     this.estado = 'Aceptada';
+
+    // rf-13: avisarle al prestador que aceptaron su propuesta
+    const prestador = Usuario.buscarPorId(this.prestadorId);
+    const asunto = 'Aceptaron tu propuesta en ServiCerca';
+    let estadoEnvio = 'Fallido';
+    try {
+      if (!process.env.SMTP_HOST) throw new Error('falta SMTP_HOST en el .env');
+      const transporte = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+        connectionTimeout: 10000,
+        socketTimeout: 15000,
+      });
+      await transporte.sendMail({
+        from: process.env.MAIL_FROM || 'ServiCerca <no-reply@servicerca.local>',
+        to: prestador.correo,
+        subject: asunto,
+        text: `Hola, ${prestador.nombre}:\n\n`
+          + `El cliente aceptó tu propuesta de $${this.precio}. Ponte de acuerdo con él para hacer el trabajo.\n\n`
+          + `Puedes verla en tu historial: ${process.env.APP_URL || 'http://localhost:3000'}/historial/propuestas/${this.id}\n`,
+      });
+      estadoEnvio = 'Enviado';
+    } catch (err) {
+      log.aviso('No se pudo enviar el aviso de propuesta aceptada: ' + err.message);
+    }
+    Notificacion.registrar(this.id, prestador.correo, asunto, estadoEnvio);
 
     return null;
   }
