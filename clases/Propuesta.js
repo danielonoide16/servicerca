@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 const db = require('../db/db');
 const log = require('../utils/log');
+const { armarHtml, armarTexto } = require('../utils/correo');
 const Usuario = require('./Usuario');
 const Notificacion = require('./Notificacion');
 
@@ -101,14 +102,22 @@ class Propuesta {
         connectionTimeout: 10000,
         socketTimeout: 15000,
       });
+      const contenido = {
+        nombre: cliente.nombre,
+        parrafos: [
+          `Un prestador te mandó una propuesta de $${precio} para tu solicitud "${solicitud.descripcion}".`,
+          `Disponibilidad: ${disponibilidad.trim()}.`,
+        ],
+        enlace: `${process.env.APP_URL || 'http://localhost:3000'}/solicitudes/${solicitud.id}`,
+        textoBoton: 'Ver la propuesta',
+        nota: 'Entra a ServiCerca para verla y aceptarla.',
+      };
       await transporte.sendMail({
         from: process.env.MAIL_FROM || 'ServiCerca <no-reply@servicerca.local>',
         to: cliente.correo,
         subject: asunto,
-        text: `Hola, ${cliente.nombre}:\n\n`
-          + `Un prestador te mandó una propuesta de $${precio} para tu solicitud "${solicitud.descripcion}".\n`
-          + `Disponibilidad: ${disponibilidad.trim()}\n\n`
-          + `Entra a ServiCerca para verla y aceptarla: ${process.env.APP_URL || 'http://localhost:3000'}/solicitudes/${solicitud.id}\n`,
+        html: armarHtml(contenido),
+        text: armarTexto(contenido),
       });
       estadoEnvio = 'Enviado';
     } catch (err) {
@@ -157,13 +166,22 @@ class Propuesta {
         connectionTimeout: 10000,
         socketTimeout: 15000,
       });
+      const contenido = {
+        nombre: prestador.nombre,
+        parrafos: [
+          `El cliente aceptó tu propuesta de $${this.precio}.`,
+          'Ponte de acuerdo con él para hacer el trabajo.',
+        ],
+        enlace: `${process.env.APP_URL || 'http://localhost:3000'}/historial/propuestas/${this.id}`,
+        textoBoton: 'Ver mi propuesta',
+        nota: 'Puedes ver el detalle en tu historial de ServiCerca.',
+      };
       await transporte.sendMail({
         from: process.env.MAIL_FROM || 'ServiCerca <no-reply@servicerca.local>',
         to: prestador.correo,
         subject: asunto,
-        text: `Hola, ${prestador.nombre}:\n\n`
-          + `El cliente aceptó tu propuesta de $${this.precio}. Ponte de acuerdo con él para hacer el trabajo.\n\n`
-          + `Puedes verla en tu historial: ${process.env.APP_URL || 'http://localhost:3000'}/historial/propuestas/${this.id}\n`,
+        html: armarHtml(contenido),
+        text: armarTexto(contenido),
       });
       estadoEnvio = 'Enviado';
     } catch (err) {

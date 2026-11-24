@@ -224,6 +224,10 @@ Puedes usar cualquier otro servidor SMTP llenando las mismas variables.
 |---|---|---|
 | Verificación de correo | Registrarse, o pedir otro con "Reenviar enlace" | A la persona que se registró |
 | Restablecer contraseña | "¿Olvidaste tu contraseña?" (solo si el correo tiene cuenta) | A la dueña de la cuenta |
+| Propuesta recibida | Un prestador envía una propuesta | Al cliente dueño de la solicitud |
+| Propuesta aceptada | El cliente acepta una propuesta | Al prestador de esa propuesta |
+
+Todos usan la misma plantilla HTML (`armarHtml` en `utils/correo.js`) y llevan también una versión en texto.
 
 ### Verificación del correo y recuperación de contraseña
 
