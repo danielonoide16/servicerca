@@ -1,6 +1,9 @@
 <%- include('../partials/header', { titulo: 'Solicitud de ' + solicitud.oficio }) %>
 <section class="tarjeta">
   <h1>Solicitud de <%= solicitud.oficio %></h1>
+  <% if (aviso) { %>
+    <p class="mensaje"><%= aviso %></p>
+  <% } %>
   <p><span class="estado estado-<%= solicitud.estado %>"><%= solicitud.estado %></span></p>
   <p><strong>Descripción:</strong> <%= solicitud.descripcion %></p>
   <p><strong>Zona:</strong> <%= solicitud.zona %></p>
@@ -24,6 +27,37 @@
       <% } %>
     </div>
 
+    <h2>Propuestas recibidas</h2>
+    <% if (propuestas.length === 0) { %>
+      <p>Todavía no has recibido propuestas.</p>
+    <% } else { %>
+      <table>
+        <thead>
+          <tr><th>Prestador</th><th>Zona</th><th>Precio</th><th>Disponibilidad</th><th>Mensaje</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% propuestas.forEach(function (p) { %>
+            <tr>
+              <td><%= p.prestadorNombre %></td>
+              <td><%= p.prestadorZona || '—' %></td>
+              <td>$<%= p.precio %></td>
+              <td><%= p.disponibilidad %></td>
+              <td><%= p.mensaje || '' %></td>
+              <td><span class="estado estado-<%= p.estado %>"><%= p.estado %></span></td>
+              <td class="acciones">
+                <% if (solicitud.estado === 'Publicada' && p.puedeAceptarse()) { %>
+                  <form action="/propuestas/<%= p.id %>/aceptar" method="post" class="en-linea"
+                        onsubmit="return confirm('¿Aceptar esta propuesta? Las demás quedarán rechazadas.');">
+                    <button type="submit" class="enlace">Aceptar</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+
     <% if (resena) { %>
       <h2>Tu reseña</h2>
       <p><strong>Calificación:</strong> <%= resena.calificacion %> de 5</p>
@@ -34,6 +68,13 @@
 
     <p><a href="/solicitudes/mias">Volver a mis solicitudes</a></p>
   <% } else { %>
+    <% if (solicitud.estado === 'Publicada') { %>
+      <% if (yaPropuso) { %>
+        <p>Ya enviaste una propuesta a esta solicitud. Puedes ver su estado en tu <a href="/historial">historial</a>.</p>
+      <% } else { %>
+        <p><a class="boton" href="/propuestas/nueva/<%= solicitud.id %>">Enviar propuesta</a></p>
+      <% } %>
+    <% } %>
     <p><a href="/solicitudes">Volver a la búsqueda</a></p>
   <% } %>
 </section>
