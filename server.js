@@ -53,6 +53,12 @@ app.use(session({
 // req.user y res.locals.usuario salen de la base de datos en cada petición
 app.use(cargarUsuario);
 
+// la ruta actual, para marcar en el menú la página donde está el usuario
+app.use((req, res, next) => {
+  res.locals.ruta = req.path;
+  next();
+});
+
 app.use('/', require('./routes/auth'));
 app.use('/', require('./routes/cuenta'));
 app.use('/perfil', require('./routes/perfil'));
