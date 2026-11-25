@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const Usuario = require('../clases/Usuario');
+const Contrasena = require('../clases/Contrasena');
 const tokens = require('../db/tokenModel');
 const { enviarCorreo } = require('../utils/correo');
 const log = require('../utils/log');
@@ -69,13 +70,8 @@ async function registroVista(req, res) {
   if (nombre.length < 2) errores.push('El nombre debe tener al menos 2 caracteres');
   if (nombre.length > 100) errores.push('El nombre debe tener como máximo 100 caracteres');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) errores.push('Debe ser un correo válido');
-  if (contrasena.length < 8) {
-    errores.push('La contraseña debe tener al menos 8 caracteres');
-  } else if (Buffer.byteLength(contrasena, 'utf8') > 72) {
-    errores.push('La contraseña debe tener como máximo 72 caracteres');
-  } else if (!/[A-Za-z]/.test(contrasena) || !/\d/.test(contrasena)) {
-    errores.push('La contraseña debe incluir al menos una letra y un número');
-  }
+  const errorContrasena = Contrasena.errorDe(contrasena);
+  if (errorContrasena) errores.push(errorContrasena);
   if (rol !== 'cliente' && rol !== 'prestador') errores.push('Debes elegir si eres cliente o prestador');
   if (body.aceptaPrivacidad !== 'on') errores.push('Debes aceptar el aviso de privacidad');
 

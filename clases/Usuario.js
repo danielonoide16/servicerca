@@ -1,8 +1,5 @@
-const bcrypt = require('bcryptjs');
 const db = require('../db/db');
-
-// Se compara contra este hash cuando el correo no existe, para que ambos casos tarden parecido
-const HASH_FALSO = bcrypt.hashSync('contrasena-de-relleno', 10);
+const Contrasena = require('./Contrasena');
 
 // Cuenta de un cliente, un prestador o un administrador (RF-01, RF-02)
 class Usuario {
@@ -40,7 +37,7 @@ class Usuario {
 
   // RF-01: crea la cuenta con la contraseña cifrada
   static async registrar(nombre, correo, contrasena, rol) {
-    const contrasenaHash = await bcrypt.hash(contrasena, 10);
+    const contrasenaHash = await Contrasena.cifrar(contrasena);
     const { lastInsertRowid } = db
       .prepare('INSERT INTO usuarios (nombre, correo, contrasena_hash, rol) VALUES (?, ?, ?, ?)')
       .run(nombre, correo, contrasenaHash, rol);
@@ -51,7 +48,7 @@ class Usuario {
   static async buscarPorCredenciales(correo, contrasena) {
     const usuario = Usuario.buscarPorCorreo(correo);
     if (!usuario) {
-      await bcrypt.compare(contrasena, HASH_FALSO);
+      await Contrasena.compararConFalso(contrasena);
       return null;
     }
     const coincide = await usuario.autenticar(contrasena);
@@ -59,16 +56,12 @@ class Usuario {
   }
 
   async autenticar(contrasena) {
-    return bcrypt.compare(contrasena, this.contrasenaHash);
+    return Contrasena.coincide(contrasena, this.contrasenaHash);
   }
 
   marcarCorreoVerificado() {
     db.prepare('UPDATE usuarios SET email_verificado = 1 WHERE id = ?').run(this.id);
     this.emailVerificado = true;
-  }
-
-  static async cifrarContrasena(contrasena) {
-    return bcrypt.hash(contrasena, 10);
   }
 
   actualizarContrasena(contrasenaHash) {

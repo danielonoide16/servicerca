@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const db = require('../db/db');
 const log = require('../utils/log');
 const Usuario = require('../clases/Usuario');
+const Contrasena = require('../clases/Contrasena');
 const tokens = require('../db/tokenModel');
 const { enviarCorreo } = require('../utils/correo');
 
@@ -117,17 +118,12 @@ async function restablecerVista(req, res) {
 
   if (/^[a-f0-9]{64}$/.test(token)) {
     const errores = [];
-    if (contrasena.length < 8) {
-      errores.push('La contraseña debe tener al menos 8 caracteres');
-    } else if (Buffer.byteLength(contrasena, 'utf8') > 72) {
-      errores.push('La contraseña debe tener como máximo 72 caracteres');
-    } else if (!/[A-Za-z]/.test(contrasena) || !/\d/.test(contrasena)) {
-      errores.push('La contraseña debe incluir al menos una letra y un número');
-    }
+    const errorContrasena = Contrasena.errorDe(contrasena);
+    if (errorContrasena) errores.push(errorContrasena);
     if (contrasena !== confirmacion) errores.push('Las contraseñas no coinciden');
 
     if (errores.length === 0) {
-      const hash = await Usuario.cifrarContrasena(contrasena);
+      const hash = await Contrasena.cifrar(contrasena);
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
       const usuarioId = db.transaction(() => {
         const id = tokens.marcarUsado(tokenHash, 'reset-password', new Date().toISOString());
