@@ -1,7 +1,6 @@
-const nodemailer = require('nodemailer');
 const db = require('../db/db');
-const log = require('../utils/log');
-const { armarHtml, armarTexto } = require('../utils/correo');
+const { enviarAviso, APP_URL } = require('../utils/correo');
+const { fechaCorta } = require('../utils/fechas');
 const Usuario = require('./Usuario');
 const Notificacion = require('./Notificacion');
 
@@ -91,38 +90,17 @@ class Propuesta {
     // rf-13: avisarle al cliente que llegó una propuesta
     const cliente = Usuario.buscarPorId(solicitud.clienteId);
     const asunto = 'Recibiste una propuesta para tu solicitud de ' + solicitud.oficio;
-    let estadoEnvio = 'Fallido';
-    try {
-      if (!process.env.SMTP_HOST) throw new Error('falta SMTP_HOST en el .env');
-      const transporte = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
-        connectionTimeout: 10000,
-        socketTimeout: 15000,
-      });
-      const contenido = {
-        nombre: cliente.nombre,
-        parrafos: [
-          `Un prestador te mandó una propuesta de $${precio} para tu solicitud "${solicitud.descripcion}".`,
-          `Disponibilidad: ${disponibilidad.trim()}.`,
-        ],
-        enlace: `${process.env.APP_URL || 'http://localhost:3000'}/solicitudes/${solicitud.id}`,
-        textoBoton: 'Ver la propuesta',
-        nota: 'Entra a ServiCerca para verla y aceptarla.',
-      };
-      await transporte.sendMail({
-        from: process.env.MAIL_FROM || 'ServiCerca <no-reply@servicerca.local>',
-        to: cliente.correo,
-        subject: asunto,
-        html: armarHtml(contenido),
-        text: armarTexto(contenido),
-      });
-      estadoEnvio = 'Enviado';
-    } catch (err) {
-      log.aviso('No se pudo enviar el aviso de propuesta recibida: ' + err.message);
-    }
+    const enviado = await enviarAviso(cliente.correo, asunto, {
+      nombre: cliente.nombre,
+      parrafos: [
+        `Un prestador te mandó una propuesta de $${precio} para tu solicitud "${solicitud.descripcion}".`,
+        `Disponibilidad: ${disponibilidad.trim()}.`,
+      ],
+      enlace: `${APP_URL()}/solicitudes/${solicitud.id}`,
+      textoBoton: 'Ver la propuesta',
+      nota: 'Entra a ServiCerca para verla y aceptarla.',
+    }, 'propuesta-recibida');
+    const estadoEnvio = enviado ? 'Enviado' : 'Fallido';
     Notificacion.registrar(propuesta.id, cliente.correo, asunto, estadoEnvio);
 
     return { errores: [], propuesta };
@@ -155,38 +133,17 @@ class Propuesta {
     // rf-13: avisarle al prestador que aceptaron su propuesta
     const prestador = Usuario.buscarPorId(this.prestadorId);
     const asunto = 'Aceptaron tu propuesta en ServiCerca';
-    let estadoEnvio = 'Fallido';
-    try {
-      if (!process.env.SMTP_HOST) throw new Error('falta SMTP_HOST en el .env');
-      const transporte = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
-        connectionTimeout: 10000,
-        socketTimeout: 15000,
-      });
-      const contenido = {
-        nombre: prestador.nombre,
-        parrafos: [
-          `El cliente aceptó tu propuesta de $${this.precio}.`,
-          'Ponte de acuerdo con él para hacer el trabajo.',
-        ],
-        enlace: `${process.env.APP_URL || 'http://localhost:3000'}/historial/propuestas/${this.id}`,
-        textoBoton: 'Ver mi propuesta',
-        nota: 'Puedes ver el detalle en tu historial de ServiCerca.',
-      };
-      await transporte.sendMail({
-        from: process.env.MAIL_FROM || 'ServiCerca <no-reply@servicerca.local>',
-        to: prestador.correo,
-        subject: asunto,
-        html: armarHtml(contenido),
-        text: armarTexto(contenido),
-      });
-      estadoEnvio = 'Enviado';
-    } catch (err) {
-      log.aviso('No se pudo enviar el aviso de propuesta aceptada: ' + err.message);
-    }
+    const enviado = await enviarAviso(prestador.correo, asunto, {
+      nombre: prestador.nombre,
+      parrafos: [
+        `El cliente aceptó tu propuesta de $${this.precio}.`,
+        'Ponte de acuerdo con él para hacer el trabajo.',
+      ],
+      enlace: `${APP_URL()}/historial/propuestas/${this.id}`,
+      textoBoton: 'Ver mi propuesta',
+      nota: 'Puedes ver el detalle en tu historial de ServiCerca.',
+    }, 'propuesta-aceptada');
+    const estadoEnvio = enviado ? 'Enviado' : 'Fallido';
     Notificacion.registrar(this.id, prestador.correo, asunto, estadoEnvio);
 
     return null;
@@ -198,7 +155,7 @@ class Propuesta {
   }
 
   fechaCorta() {
-    return this.fechaEnvio.slice(0, 10);
+    return fechaCorta(this.fechaEnvio);
   }
 }
 
