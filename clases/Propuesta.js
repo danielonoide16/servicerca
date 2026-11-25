@@ -1,8 +1,5 @@
 const db = require('../db/db');
-const { urlApp } = require('../utils/plantillaCorreo');
 const { fechaCorta } = require('../utils/fechas');
-const Usuario = require('./Usuario');
-const Notificacion = require('./Notificacion');
 
 // propuesta que un prestador le manda a una solicitud publicada (rf-06, rf-07, rf-08)
 class Propuesta {
@@ -47,9 +44,9 @@ class Propuesta {
   }
 
   // rf-06: valida y guarda la propuesta de un prestador para una solicitud (objeto SolicitudTrabajo).
-  // servicioCorreo es cualquier implementación de ServicioCorreo, la elige quien llama.
+  // avisos es un objeto AvisosPropuesta que manda el aviso por correo al cliente (rf-13).
   // regresa { errores, propuesta }: si hay errores, propuesta es null
-  static async enviar(solicitud, prestadorId, precio, disponibilidad, mensaje, servicioCorreo) {
+  static async enviar(solicitud, prestadorId, precio, disponibilidad, mensaje, avisos) {
     const errores = [];
 
     if (solicitud.estado !== 'Publicada') {
@@ -89,27 +86,14 @@ class Propuesta {
     const propuesta = Propuesta.buscarPorId(Number(resultado.lastInsertRowid));
 
     // rf-13: avisarle al cliente que llegó una propuesta
-    const cliente = Usuario.buscarPorId(solicitud.clienteId);
-    const asunto = 'Recibiste una propuesta para tu solicitud de ' + solicitud.oficio;
-    const enviado = await servicioCorreo.enviar(cliente.correo, asunto, {
-      nombre: cliente.nombre,
-      parrafos: [
-        `Un prestador te mandó una propuesta de $${precio} para tu solicitud "${solicitud.descripcion}".`,
-        `Disponibilidad: ${disponibilidad.trim()}.`,
-      ],
-      enlace: `${urlApp()}/solicitudes/${solicitud.id}`,
-      textoBoton: 'Ver la propuesta',
-      nota: 'Entra a ServiCerca para verla y aceptarla.',
-    }, 'propuesta-recibida');
-    const estadoEnvio = enviado ? 'Enviado' : 'Fallido';
-    Notificacion.registrar(propuesta.id, cliente.correo, asunto, estadoEnvio);
+    await avisos.propuestaRecibida(propuesta, solicitud);
 
     return { errores: [], propuesta };
   }
 
   // rf-08: el cliente acepta esta propuesta. la solicitud pasa a asignada y las demás propuestas quedan rechazadas.
-  // servicioCorreo es cualquier implementación de ServicioCorreo. regresa el mensaje de error, o null si se aceptó
-  async aceptar(usuarioId, servicioCorreo) {
+  // avisos es un objeto AvisosPropuesta que le avisa al prestador (rf-13). regresa el mensaje de error, o null si se aceptó
+  async aceptar(usuarioId, avisos) {
     const solicitud = db.prepare('SELECT id, cliente_id, estado FROM solicitudes WHERE id = ?').get(this.solicitudId);
     if (solicitud.cliente_id !== usuarioId) {
       return 'No tienes permiso para aceptar esta propuesta';
@@ -132,20 +116,7 @@ class Propuesta {
     this.estado = 'Aceptada';
 
     // rf-13: avisarle al prestador que aceptaron su propuesta
-    const prestador = Usuario.buscarPorId(this.prestadorId);
-    const asunto = 'Aceptaron tu propuesta en ServiCerca';
-    const enviado = await servicioCorreo.enviar(prestador.correo, asunto, {
-      nombre: prestador.nombre,
-      parrafos: [
-        `El cliente aceptó tu propuesta de $${this.precio}.`,
-        'Ponte de acuerdo con él para hacer el trabajo.',
-      ],
-      enlace: `${urlApp()}/historial/propuestas/${this.id}`,
-      textoBoton: 'Ver mi propuesta',
-      nota: 'Puedes ver el detalle en tu historial de ServiCerca.',
-    }, 'propuesta-aceptada');
-    const estadoEnvio = enviado ? 'Enviado' : 'Fallido';
-    Notificacion.registrar(this.id, prestador.correo, asunto, estadoEnvio);
+    await avisos.propuestaAceptada(this);
 
     return null;
   }
