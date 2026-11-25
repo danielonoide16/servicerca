@@ -13,7 +13,7 @@
     </div>
     <div>
       <label for="zona">Zona</label>
-      <input type="text" id="zona" name="zona" value="<%= filtros.zona %>" maxlength="100" placeholder="Por ejemplo: Centro">
+      <input type="text" id="zona" name="zona" value="<%= filtros.zona %>" maxlength="<%= limites.ZONA_MAX %>" placeholder="Por ejemplo: Centro">
     </div>
     <div>
       <button type="submit">Buscar</button>
@@ -33,7 +33,7 @@
       <tbody>
         <% solicitudes.forEach(function (s) { %>
           <tr>
-            <td><%= s.fechaCorta() %></td>
+            <td><%= s.fechaPublicacion.slice(0, 10) %></td>
             <td><%= s.oficio %></td>
             <td><%= s.descripcion %></td>
             <td><%= s.zona %></td>

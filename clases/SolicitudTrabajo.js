@@ -1,4 +1,67 @@
 const db = require('../db/db');
+const { ESTADOS_SOLICITUD, ESTADOS_PROPUESTA } = require('../db/tipos');
+
+// Límites de los datos de una solicitud y de la búsqueda
+const LIMITES = {
+  DESCRIPCION_MIN: 10,
+  DESCRIPCION_MAX: 500,
+  ZONA_MAX: 100,
+  RESULTADOS_BUSQUEDA: 50,
+};
+
+// Consulta base: la solicitud con el nombre de su oficio
+const SELECT_SOLICITUD = `SELECT s.*, o.nombre AS oficio
+  FROM solicitudes s
+  JOIN oficios o ON o.id = s.oficio_id`;
+
+// ---------- Funciones auxiliares (no usan el estado de una solicitud) ----------
+
+function existeOficio(oficioId) {
+  return Boolean(db.prepare('SELECT 1 FROM oficios WHERE id = ?').get(oficioId));
+}
+
+// Regresa la lista de errores de los datos de una solicitud nueva (vacía si son válidos)
+function validarDatos(oficioId, descripcion, zona) {
+  const errores = [];
+
+  if (!oficioId) {
+    errores.push('Elige el oficio que necesitas');
+  } else if (!existeOficio(oficioId)) {
+    errores.push('El oficio elegido no existe');
+  }
+
+  if (!descripcion || descripcion.trim().length < LIMITES.DESCRIPCION_MIN) {
+    errores.push(`Describe el trabajo con al menos ${LIMITES.DESCRIPCION_MIN} caracteres`);
+  } else if (descripcion.trim().length > LIMITES.DESCRIPCION_MAX) {
+    errores.push(`La descripción debe tener como máximo ${LIMITES.DESCRIPCION_MAX} caracteres`);
+  }
+
+  if (!zona || zona.trim() === '') {
+    errores.push('La zona es obligatoria');
+  } else if (zona.trim().length > LIMITES.ZONA_MAX) {
+    errores.push(`La zona debe tener como máximo ${LIMITES.ZONA_MAX} caracteres`);
+  }
+
+  return errores;
+}
+
+// Arma las condiciones del WHERE de la búsqueda (RF-05) y sus parámetros
+function armarFiltros(oficioId, zona) {
+  const condiciones = ['s.estado = ?'];
+  const parametros = [ESTADOS_SOLICITUD.PUBLICADA];
+
+  if (oficioId) {
+    condiciones.push('s.oficio_id = ?');
+    parametros.push(oficioId);
+  }
+  const zonaLimpia = (zona || '').trim().slice(0, LIMITES.ZONA_MAX);
+  if (zonaLimpia !== '') {
+    condiciones.push('s.zona LIKE ?');
+    parametros.push('%' + zonaLimpia + '%');
+  }
+
+  return { condiciones, parametros };
+}
 
 // Trabajo que publica un cliente para que los prestadores le manden propuestas.
 // RF-04 publicar, RF-05 buscar, RF-09 completar y RF-10 cancelar.
@@ -17,94 +80,44 @@ class SolicitudTrabajo {
   // RF-04: valida los datos y publica la solicitud.
   // Regresa { errores, solicitud }: si hay errores, solicitud es null.
   static publicar(clienteId, oficioId, descripcion, zona) {
-    const errores = [];
-
-    if (!oficioId) {
-      errores.push('Elige el oficio que necesitas');
-    } else {
-      const oficios = db.prepare('SELECT id, nombre FROM oficios ORDER BY nombre').all();
-      if (!oficios.some((o) => o.id === oficioId)) {
-        errores.push('El oficio elegido no existe');
-      }
-    }
-
-    if (!descripcion || descripcion.trim().length < 10) {
-      errores.push('Describe el trabajo con al menos 10 caracteres');
-    } else if (descripcion.trim().length > 500) {
-      errores.push('La descripción debe tener como máximo 500 caracteres');
-    }
-
-    if (!zona || zona.trim() === '') {
-      errores.push('La zona es obligatoria');
-    } else if (zona.trim().length > 100) {
-      errores.push('La zona debe tener como máximo 100 caracteres');
-    }
-
+    const errores = validarDatos(oficioId, descripcion, zona);
     if (errores.length > 0) return { errores, solicitud: null };
 
     const resultado = db
       .prepare(
         `INSERT INTO solicitudes (cliente_id, oficio_id, descripcion, zona, estado)
-         VALUES (?, ?, ?, ?, 'Publicada')`,
+         VALUES (?, ?, ?, ?, ?)`,
       )
-      .run(clienteId, oficioId, descripcion.trim(), zona.trim());
+      .run(clienteId, oficioId, descripcion.trim(), zona.trim(), ESTADOS_SOLICITUD.PUBLICADA);
 
     return { errores: [], solicitud: SolicitudTrabajo.buscarPorId(Number(resultado.lastInsertRowid)) };
   }
 
   // RF-05: solicitudes publicadas, filtradas por oficio y por zona (los dos son opcionales)
   static buscar(oficioId, zona) {
-    let sql = `SELECT s.*, o.nombre AS oficio
-               FROM solicitudes s
-               JOIN oficios o ON o.id = s.oficio_id
-               WHERE s.estado = 'Publicada'`;
-    const parametros = [];
-
-    if (oficioId) {
-      sql += ' AND s.oficio_id = ?';
-      parametros.push(oficioId);
-    }
-    if (zona && zona.trim() !== '') {
-      if (zona.trim().length > 100) {
-        zona = zona.trim().slice(0, 100);
-      }
-      sql += ' AND s.zona LIKE ?';
-      parametros.push('%' + zona.trim() + '%');
-    }
-    sql += ' ORDER BY s.fecha_publicacion DESC, s.id DESC LIMIT 50';
-
-    return db.prepare(sql).all(...parametros).map((fila) => new SolicitudTrabajo(fila));
+    const { condiciones, parametros } = armarFiltros(oficioId, zona);
+    return db
+      .prepare(
+        `${SELECT_SOLICITUD}
+         WHERE ${condiciones.join(' AND ')}
+         ORDER BY s.fecha_publicacion DESC, s.id DESC
+         LIMIT ?`,
+      )
+      .all(...parametros, LIMITES.RESULTADOS_BUSQUEDA)
+      .map((fila) => new SolicitudTrabajo(fila));
   }
 
   static buscarPorId(id) {
-    const fila = db
-      .prepare(
-        `SELECT s.*, o.nombre AS oficio
-         FROM solicitudes s
-         JOIN oficios o ON o.id = s.oficio_id
-         WHERE s.id = ?`,
-      )
-      .get(id);
+    const fila = db.prepare(`${SELECT_SOLICITUD} WHERE s.id = ?`).get(id);
     return fila ? new SolicitudTrabajo(fila) : null;
   }
 
   // Solicitudes de un cliente, de la más nueva a la más vieja
   static delCliente(clienteId) {
     return db
-      .prepare(
-        `SELECT s.*, o.nombre AS oficio
-         FROM solicitudes s
-         JOIN oficios o ON o.id = s.oficio_id
-         WHERE s.cliente_id = ?
-         ORDER BY s.fecha_publicacion DESC, s.id DESC`,
-      )
+      .prepare(`${SELECT_SOLICITUD} WHERE s.cliente_id = ? ORDER BY s.fecha_publicacion DESC, s.id DESC`)
       .all(clienteId)
       .map((fila) => new SolicitudTrabajo(fila));
-  }
-
-  // Para los selectores de oficio del formulario y del buscador
-  static catalogoOficios() {
-    return db.prepare('SELECT id, nombre FROM oficios ORDER BY nombre').all();
   }
 
   // RF-09: el cliente marca como completada una solicitud asignada.
@@ -113,12 +126,11 @@ class SolicitudTrabajo {
     if (this.clienteId !== usuarioId) {
       return 'No tienes permiso para modificar esta solicitud';
     }
-    if (this.estado !== 'Asignada') {
+    if (!this.puedeCompletarse()) {
       return 'Solo puedes marcar como completada una solicitud asignada';
     }
 
-    db.prepare("UPDATE solicitudes SET estado = 'Completada' WHERE id = ?").run(this.id);
-    this.estado = 'Completada';
+    this.cambiarEstado(ESTADOS_SOLICITUD.COMPLETADA);
     return null;
   }
 
@@ -128,37 +140,37 @@ class SolicitudTrabajo {
     if (this.clienteId !== usuarioId) {
       return 'No tienes permiso para modificar esta solicitud';
     }
-    if (this.estado !== 'Publicada' && this.estado !== 'Asignada') {
+    if (!this.puedeCancelarse()) {
       return 'Solo puedes cancelar una solicitud publicada o asignada';
     }
 
-    const cancelarTodo = db.transaction(() => {
-      db.prepare("UPDATE solicitudes SET estado = 'Cancelada' WHERE id = ?").run(this.id);
-      db.prepare(
-        "UPDATE propuestas SET estado = 'Rechazada' WHERE solicitud_id = ? AND estado = 'Enviada'",
-      ).run(this.id);
-    });
-    cancelarTodo();
-    this.estado = 'Cancelada';
+    db.transaction(() => {
+      this.cambiarEstado(ESTADOS_SOLICITUD.CANCELADA);
+      db.prepare('UPDATE propuestas SET estado = ? WHERE solicitud_id = ? AND estado = ?')
+        .run(ESTADOS_PROPUESTA.RECHAZADA, this.id, ESTADOS_PROPUESTA.ENVIADA);
+    })();
     return null;
   }
 
-  // Lo usan las vistas para mostrar u ocultar los botones
+  // Reglas de RN-06: de qué estado se puede pasar a cuál
   puedeCompletarse() {
-    return this.estado === 'Asignada';
+    return this.estado === ESTADOS_SOLICITUD.ASIGNADA;
   }
 
   puedeCancelarse() {
-    return this.estado === 'Publicada' || this.estado === 'Asignada';
+    return this.estado === ESTADOS_SOLICITUD.PUBLICADA || this.estado === ESTADOS_SOLICITUD.ASIGNADA;
   }
 
   puedeResenarse() {
-    return this.estado === 'Completada';
+    return this.estado === ESTADOS_SOLICITUD.COMPLETADA;
   }
 
-  fechaCorta() {
-    return this.fechaPublicacion.slice(0, 10);
+  // Guarda el nuevo estado en la base y en el objeto
+  cambiarEstado(nuevoEstado) {
+    db.prepare('UPDATE solicitudes SET estado = ? WHERE id = ?').run(nuevoEstado, this.id);
+    this.estado = nuevoEstado;
   }
 }
 
 module.exports = SolicitudTrabajo;
+module.exports.LIMITES = LIMITES;

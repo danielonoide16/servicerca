@@ -1,4 +1,9 @@
 const db = require('../db/db');
+const { ESTADOS_SOLICITUD } = require('../db/tipos');
+
+const CALIFICACION_MIN = 1;
+const CALIFICACION_MAX = 5;
+const COMENTARIO_MAX = 500;
 
 // Calificación que deja el cliente cuando su solicitud está completada (RF-11, RN-05)
 class Resena {
@@ -25,7 +30,7 @@ class Resena {
       errores.push('No tienes permiso para reseñar esta solicitud');
       return { errores, resena: null };
     }
-    if (solicitud.estado !== 'Completada') {
+    if (solicitud.estado !== ESTADOS_SOLICITUD.COMPLETADA) {
       errores.push('Solo puedes reseñar una solicitud completada');
       return { errores, resena: null };
     }
@@ -34,11 +39,11 @@ class Resena {
       return { errores, resena: null };
     }
 
-    if (!Number.isInteger(calificacion) || calificacion < 1 || calificacion > 5) {
-      errores.push('Elige una calificación de 1 a 5');
+    if (!Number.isInteger(calificacion) || calificacion < CALIFICACION_MIN || calificacion > CALIFICACION_MAX) {
+      errores.push(`Elige una calificación de ${CALIFICACION_MIN} a ${CALIFICACION_MAX}`);
     }
-    if (comentario && comentario.trim().length > 500) {
-      errores.push('El comentario debe tener como máximo 500 caracteres');
+    if (comentario && comentario.trim().length > COMENTARIO_MAX) {
+      errores.push(`El comentario debe tener como máximo ${COMENTARIO_MAX} caracteres`);
     }
     if (errores.length > 0) return { errores, resena: null };
 
@@ -51,3 +56,4 @@ class Resena {
 }
 
 module.exports = Resena;
+module.exports.LIMITES = { CALIFICACION_MIN, CALIFICACION_MAX, COMENTARIO_MAX };

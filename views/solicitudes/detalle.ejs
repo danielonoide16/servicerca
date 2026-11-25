@@ -7,7 +7,7 @@
   <p><span class="estado estado-<%= solicitud.estado %>"><%= solicitud.estado %></span></p>
   <p><strong>Descripción:</strong> <%= solicitud.descripcion %></p>
   <p><strong>Zona:</strong> <%= solicitud.zona %></p>
-  <p><strong>Publicada el:</strong> <%= solicitud.fechaCorta() %></p>
+  <p><strong>Publicada el:</strong> <%= solicitud.fechaPublicacion.slice(0, 10) %></p>
 
   <% if (esDueno) { %>
     <div class="botones">
