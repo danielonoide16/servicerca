@@ -2,8 +2,12 @@ const express = require('express');
 const { requireRole, requireVerifiedEmail } = require('../middleware/requireAuth');
 const SolicitudTrabajo = require('../clases/SolicitudTrabajo');
 const Propuesta = require('../clases/Propuesta');
+const CorreoNodemailer = require('../clases/CorreoNodemailer');
 
 const router = express.Router();
+
+// aquí se decide con qué servicio salen los avisos. para cambiar de proveedor solo se cambia esta línea
+const servicioCorreo = new CorreoNodemailer();
 
 const texto = (valor) => (typeof valor === 'string' ? valor : '');
 
@@ -46,7 +50,7 @@ router.post('/nueva/:solicitudId', requireRole('prestador'), requireVerifiedEmai
   const disponibilidad = texto(req.body.disponibilidad);
   const mensaje = texto(req.body.mensaje);
 
-  const { errores } = await Propuesta.enviar(solicitud, req.user.id, precio, disponibilidad, mensaje);
+  const { errores } = await Propuesta.enviar(solicitud, req.user.id, precio, disponibilidad, mensaje, servicioCorreo);
   if (errores.length > 0) {
     return res.status(400).render('propuestas/nueva', {
       titulo: 'Enviar propuesta',
@@ -66,7 +70,7 @@ router.post('/:id/aceptar', requireRole('cliente'), async (req, res) => {
     return res.status(404).render('error', { status: 404, message: 'No encontramos esa propuesta' });
   }
 
-  const error = await propuesta.aceptar(req.user.id);
+  const error = await propuesta.aceptar(req.user.id, servicioCorreo);
   if (error) {
     const solicitud = SolicitudTrabajo.buscarPorId(propuesta.solicitudId);
     const status = solicitud.clienteId !== req.user.id ? 403 : 409;

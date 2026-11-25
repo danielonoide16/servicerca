@@ -1,5 +1,5 @@
 const db = require('../db/db');
-const { enviarAviso, APP_URL } = require('../utils/correo');
+const { urlApp } = require('../utils/plantillaCorreo');
 const { fechaCorta } = require('../utils/fechas');
 const Usuario = require('./Usuario');
 const Notificacion = require('./Notificacion');
@@ -47,8 +47,9 @@ class Propuesta {
   }
 
   // rf-06: valida y guarda la propuesta de un prestador para una solicitud (objeto SolicitudTrabajo).
+  // servicioCorreo es cualquier implementación de ServicioCorreo, la elige quien llama.
   // regresa { errores, propuesta }: si hay errores, propuesta es null
-  static async enviar(solicitud, prestadorId, precio, disponibilidad, mensaje) {
+  static async enviar(solicitud, prestadorId, precio, disponibilidad, mensaje, servicioCorreo) {
     const errores = [];
 
     if (solicitud.estado !== 'Publicada') {
@@ -90,13 +91,13 @@ class Propuesta {
     // rf-13: avisarle al cliente que llegó una propuesta
     const cliente = Usuario.buscarPorId(solicitud.clienteId);
     const asunto = 'Recibiste una propuesta para tu solicitud de ' + solicitud.oficio;
-    const enviado = await enviarAviso(cliente.correo, asunto, {
+    const enviado = await servicioCorreo.enviar(cliente.correo, asunto, {
       nombre: cliente.nombre,
       parrafos: [
         `Un prestador te mandó una propuesta de $${precio} para tu solicitud "${solicitud.descripcion}".`,
         `Disponibilidad: ${disponibilidad.trim()}.`,
       ],
-      enlace: `${APP_URL()}/solicitudes/${solicitud.id}`,
+      enlace: `${urlApp()}/solicitudes/${solicitud.id}`,
       textoBoton: 'Ver la propuesta',
       nota: 'Entra a ServiCerca para verla y aceptarla.',
     }, 'propuesta-recibida');
@@ -107,8 +108,8 @@ class Propuesta {
   }
 
   // rf-08: el cliente acepta esta propuesta. la solicitud pasa a asignada y las demás propuestas quedan rechazadas.
-  // regresa el mensaje de error, o null si se aceptó
-  async aceptar(usuarioId) {
+  // servicioCorreo es cualquier implementación de ServicioCorreo. regresa el mensaje de error, o null si se aceptó
+  async aceptar(usuarioId, servicioCorreo) {
     const solicitud = db.prepare('SELECT id, cliente_id, estado FROM solicitudes WHERE id = ?').get(this.solicitudId);
     if (solicitud.cliente_id !== usuarioId) {
       return 'No tienes permiso para aceptar esta propuesta';
@@ -133,13 +134,13 @@ class Propuesta {
     // rf-13: avisarle al prestador que aceptaron su propuesta
     const prestador = Usuario.buscarPorId(this.prestadorId);
     const asunto = 'Aceptaron tu propuesta en ServiCerca';
-    const enviado = await enviarAviso(prestador.correo, asunto, {
+    const enviado = await servicioCorreo.enviar(prestador.correo, asunto, {
       nombre: prestador.nombre,
       parrafos: [
         `El cliente aceptó tu propuesta de $${this.precio}.`,
         'Ponte de acuerdo con él para hacer el trabajo.',
       ],
-      enlace: `${APP_URL()}/historial/propuestas/${this.id}`,
+      enlace: `${urlApp()}/historial/propuestas/${this.id}`,
       textoBoton: 'Ver mi propuesta',
       nota: 'Puedes ver el detalle en tu historial de ServiCerca.',
     }, 'propuesta-aceptada');
